@@ -1,0 +1,9 @@
+# Bỏ qua node_modules của cả client và server
+node_modules/
+client/node_modules/
+server/node_modules/
+
+# Bỏ qua file cấu hình nhạy cảm và build folder
+.env
+server/.env
+client/dist/
