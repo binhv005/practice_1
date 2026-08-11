@@ -1,3 +1,5 @@
+import { useEffect, useState } from "react";
+
 function ProductDetailModal({
   detailProduct,
   loadingDetail,
@@ -9,6 +11,44 @@ function ProductDetailModal({
   handleHideProduct,
   onClose,
 }) {
+  // IMAGE GALLERY
+
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+
+  // Khi đổi sang sản phẩm khác -> quay về ảnh đầu tiên
+  useEffect(() => {
+    setCurrentImageIndex(0);
+  }, [detailProduct?._id]);
+
+  const images = detailProduct?.images || [];
+
+  const hasImages = images.length > 0;
+  const hasMultipleImages = images.length > 1;
+
+  const handlePreviousImage = () => {
+    setCurrentImageIndex((prev) => {
+      if (prev === 0) {
+        return 0;
+      }
+
+      return prev - 1;
+    });
+  };
+
+  const handleNextImage = () => {
+    setCurrentImageIndex((prev) => {
+      if (prev === images.length - 1) {
+        return prev;
+      }
+
+      return prev + 1;
+    });
+  };
+
+  const handleThumbnailClick = (index) => {
+    setCurrentImageIndex(index);
+  };
+
   return (
     <div
       className="
@@ -66,6 +106,7 @@ function ProductDetailModal({
               text-gray-400
               hover:text-gray-900
               hover:bg-gray-100
+              transition
             "
           >
             ✕
@@ -97,45 +138,169 @@ function ProductDetailModal({
             <div className="p-5 sm:p-6">
               {/* TOP */}
               <div className="grid grid-cols-1 lg:grid-cols-[1.05fr_0.95fr] gap-6">
-                {/* GALLERY */}
+                {/* ================= GALLERY ================= */}
                 <div>
-                  <div className="aspect-[4/3] bg-gray-100 rounded-2xl overflow-hidden">
-                    {detailProduct.images?.length > 0 ? (
-                      <img
-                        src={detailProduct.images[0]}
-                        alt={detailProduct.title}
-                        className="w-full h-full object-cover"
-                      />
+                  {/* MAIN IMAGE */}
+                  <div className="relative aspect-[4/3] bg-gray-100 rounded-2xl overflow-hidden">
+                    {hasImages ? (
+                      <>
+                        <img
+                          src={images[currentImageIndex]}
+                          alt={`${detailProduct.title} - Ảnh ${
+                            currentImageIndex + 1
+                          }`}
+                          className="
+                            w-full
+                            h-full
+                            object-cover
+                            transition-opacity
+                            duration-200
+                          "
+                        />
+
+                        {/* PREVIOUS BUTTON */}
+                        {hasMultipleImages && (
+                          <button
+                            type="button"
+                            onClick={handlePreviousImage}
+                            disabled={currentImageIndex === 0}
+                            aria-label="Ảnh trước"
+                            className="
+                              absolute
+                              left-3
+                              top-1/2
+                              -translate-y-1/2
+                              w-10
+                              h-10
+                              rounded-full
+                              bg-white/90
+                              shadow-md
+                              flex
+                              items-center
+                              justify-center
+                              text-2xl
+                              text-gray-700
+                              transition
+                              hover:bg-white
+                              hover:scale-105
+                              disabled:opacity-30
+                              disabled:cursor-not-allowed
+                              disabled:hover:scale-100
+                            "
+                          >
+                            ‹
+                          </button>
+                        )}
+
+                        {/* NEXT BUTTON */}
+                        {hasMultipleImages && (
+                          <button
+                            type="button"
+                            onClick={handleNextImage}
+                            disabled={currentImageIndex === images.length - 1}
+                            aria-label="Ảnh tiếp theo"
+                            className="
+                              absolute
+                              right-3
+                              top-1/2
+                              -translate-y-1/2
+                              w-10
+                              h-10
+                              rounded-full
+                              bg-white/90
+                              shadow-md
+                              flex
+                              items-center
+                              justify-center
+                              text-2xl
+                              text-gray-700
+                              transition
+                              hover:bg-white
+                              hover:scale-105
+                              disabled:opacity-30
+                              disabled:cursor-not-allowed
+                              disabled:hover:scale-100
+                            "
+                          >
+                            ›
+                          </button>
+                        )}
+
+                        {/* IMAGE COUNTER */}
+                        {hasMultipleImages && (
+                          <div
+                            className="
+                              absolute
+                              bottom-3
+                              left-1/2
+                              -translate-x-1/2
+                              px-3
+                              py-1
+                              rounded-full
+                              bg-black/60
+                              text-white
+                              text-xs
+                              font-medium
+                            "
+                          >
+                            {currentImageIndex + 1} / {images.length}
+                          </div>
+                        )}
+                      </>
                     ) : (
                       <div className="w-full h-full flex flex-col items-center justify-center text-gray-400">
                         <span className="text-4xl">📦</span>
+
                         <span className="text-sm mt-2">Chưa có hình ảnh</span>
                       </div>
                     )}
                   </div>
 
-                  {detailProduct.images?.length > 1 && (
-                    <div className="grid grid-cols-5 gap-2 mt-2.5">
-                      {detailProduct.images.slice(0, 5).map((image, index) => (
-                        <img
-                          key={index}
-                          src={image}
-                          alt={`Ảnh ${index + 1}`}
-                          className="
-                            aspect-square
-                            w-full
-                            object-cover
-                            rounded-xl
-                            border
-                            border-gray-200
-                          "
-                        />
-                      ))}
+                  {/* THUMBNAILS */}
+                  {hasMultipleImages && (
+                    <div className="mt-3">
+                      <div className="grid grid-cols-5 gap-2">
+                        {images.map((image, index) => (
+                          <button
+                            key={`${image}-${index}`}
+                            type="button"
+                            onClick={() => handleThumbnailClick(index)}
+                            className={`
+                              relative
+                              aspect-square
+                              overflow-hidden
+                              rounded-xl
+                              border-2
+                              transition
+                              ${
+                                currentImageIndex === index
+                                  ? "border-[#ffba00] ring-2 ring-[#ffba00]/20"
+                                  : "border-gray-200 hover:border-gray-300"
+                              }
+                            `}
+                          >
+                            <img
+                              src={image}
+                              alt={`Ảnh ${index + 1}`}
+                              className="
+                                w-full
+                                h-full
+                                object-cover
+                              "
+                            />
+
+                            {/* SELECTED OVERLAY */}
+                            {currentImageIndex === index && (
+                              <div className="absolute inset-0 bg-black/10" />
+                            )}
+                          </button>
+                        ))}
+                      </div>
                     </div>
                   )}
                 </div>
 
-                {/* SUMMARY */}
+                {/* ================= SUMMARY ================= */}
                 <div>
                   <div className="flex flex-wrap items-center gap-2">
                     <span
@@ -298,7 +463,7 @@ function ProductDetailModal({
                   />
 
                   <InfoCard
-                    label="Quận / Huyện"
+                    label="Phường"
                     value={detailProduct.address?.ward || "Không xác định"}
                   />
 
@@ -370,6 +535,7 @@ function InfoRow({ label, value }) {
   return (
     <div>
       <p className="text-xs text-gray-400">{label}</p>
+
       <p className="text-sm font-semibold text-gray-800 mt-1">{value}</p>
     </div>
   );
