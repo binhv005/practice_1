@@ -31,7 +31,7 @@ function ProductPage() {
     keyword: "",
     category: "",
     status: "",
-    province: "",
+    ward: "",
   });
 
   // CREATE PRODUCT
@@ -63,8 +63,8 @@ function ProductPage() {
   const [detailProduct, setDetailProduct] = useState(null);
   const [loadingDetail, setLoadingDetail] = useState(false);
 
-  const [updatingFeatured, setUpdatingFeatured] = useState(false);
-  const [hiding, setHiding] = useState(false);
+  const [updatingFeaturedId, setUpdatingFeaturedId] = useState(null);
+  const [hidingId, setHidingId] = useState(null);
 
   // GET CATEGORIES
 
@@ -287,13 +287,8 @@ function ProductPage() {
       return;
     }
 
-    if (!productForm.address.province.trim()) {
-      alert("Vui lòng nhập tỉnh / thành phố");
-      return;
-    }
-
-    if (!productForm.address.district.trim()) {
-      alert("Vui lòng nhập quận / huyện");
+    if (!productForm.address.ward.trim()) {
+      alert("Vui lòng nhập phường");
       return;
     }
 
@@ -347,32 +342,48 @@ function ProductPage() {
 
   // FEATURED
 
-  const handleToggleFeatured = async () => {
-    if (!detailProduct) {
+  const handleToggleFeatured = async (product) => {
+    if (!product) {
       return;
     }
 
     try {
-      setUpdatingFeatured(true);
+      setUpdatingFeaturedId(product._id);
 
-      const newFeatured = !detailProduct.featured;
+      const newFeatured = !product.featured;
 
-      await updateProduct(detailProduct._id, {
+      await updateProduct(product._id, {
         featured: newFeatured,
       });
 
-      setDetailProduct((prev) => ({
-        ...prev,
-        featured: newFeatured,
-      }));
+      setProducts((prevProducts) =>
+        prevProducts.map((item) =>
+          item._id === product._id
+            ? {
+                ...item,
+                featured: newFeatured,
+              }
+            : item,
+        ),
+      );
+
+      // Nếu sản phẩm đang mở trong Detail Modal
+      setDetailProduct((prev) => {
+        if (!prev || prev._id !== product._id) {
+          return prev;
+        }
+
+        return {
+          ...prev,
+          featured: newFeatured,
+        };
+      });
 
       alert(
         newFeatured
           ? "Đã đánh dấu sản phẩm nổi bật"
           : "Đã bỏ đánh dấu sản phẩm nổi bật",
       );
-
-      await fetchProducts();
     } catch (error) {
       console.error("Update featured error:", error);
 
@@ -381,28 +392,28 @@ function ProductPage() {
           "Không thể cập nhật trạng thái nổi bật",
       );
     } finally {
-      setUpdatingFeatured(false);
+      setUpdatingFeaturedId(null);
     }
   };
 
   // HIDE
 
-  const handleHideProduct = async () => {
-    if (!detailProduct) {
+  const handleHideProduct = async (product) => {
+    if (!product) {
       return;
     }
 
-    if (detailProduct.status === "processing") {
+    if (product.status === "processing") {
       alert("Sản phẩm đang có giao dịch phát sinh, không thể ẩn trực tiếp");
       return;
     }
 
-    if (detailProduct.status === "hidden") {
+    if (product.status === "hidden") {
       return;
     }
 
     const confirmed = window.confirm(
-      `Bạn có chắc muốn ẩn sản phẩm "${detailProduct.title}"?`,
+      `Bạn có chắc muốn ẩn sản phẩm "${product.title}"?`,
     );
 
     if (!confirmed) {
@@ -410,24 +421,40 @@ function ProductPage() {
     }
 
     try {
-      setHiding(true);
+      setHidingId(product._id);
 
-      await hideProduct(detailProduct._id);
+      await hideProduct(product._id);
 
-      setDetailProduct((prev) => ({
-        ...prev,
-        status: "hidden",
-      }));
+      setProducts((prevProducts) =>
+        prevProducts.map((item) =>
+          item._id === product._id
+            ? {
+                ...item,
+                status: "hidden",
+              }
+            : item,
+        ),
+      );
+
+      // Nếu sản phẩm đang mở trong Detail Modal
+      setDetailProduct((prev) => {
+        if (!prev || prev._id !== product._id) {
+          return prev;
+        }
+
+        return {
+          ...prev,
+          status: "hidden",
+        };
+      });
 
       alert("Cập nhật thành công, thông báo đã được gửi cho chủ bài viết");
-
-      await fetchProducts();
     } catch (error) {
       console.error("Hide product error:", error);
 
       alert(error.response?.data?.message || "Không thể ẩn sản phẩm");
     } finally {
-      setHiding(false);
+      setHidingId(null);
     }
   };
 
@@ -627,8 +654,11 @@ function ProductPage() {
             {viewMode === "table" && (
               <ProductTable
                 products={products}
-                onUpdated={fetchProducts}
                 onProductClick={handleProductClick}
+                onToggleFeatured={handleToggleFeatured}
+                onHideProduct={handleHideProduct}
+                updatingFeaturedId={updatingFeaturedId}
+                hidingId={hidingId}
               />
             )}
           </>
@@ -658,12 +688,12 @@ function ProductPage() {
         <ProductDetailModal
           detailProduct={detailProduct}
           loadingDetail={loadingDetail}
-          updatingFeatured={updatingFeatured}
-          hiding={hiding}
+          updatingFeatured={detailProduct?._id === updatingFeaturedId}
+          hiding={detailProduct?._id === hidingId}
           getStatusLabel={getStatusLabel}
           getStatusClass={getStatusClass}
-          handleToggleFeatured={handleToggleFeatured}
-          handleHideProduct={handleHideProduct}
+          handleToggleFeatured={() => handleToggleFeatured(detailProduct)}
+          handleHideProduct={() => handleHideProduct(detailProduct)}
           onClose={() => setShowDetail(false)}
         />
       )}

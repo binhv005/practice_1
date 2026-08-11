@@ -1,3 +1,5 @@
+import HO_CHI_MINH_WARDS from "../../constants/hoChiMinhWards";
+
 function ProductFilter({ filters, setFilters, categories }) {
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -162,34 +164,39 @@ function ProductFilter({ filters, setFilters, categories }) {
           </select>
         </div>
 
-        {/* PROVINCE */}
+        {/* LOCATION */}
         <div>
           <label className="block text-xs font-medium text-gray-500 mb-1.5">
-            Tỉnh / Thành phố
+            Địa điểm
           </label>
 
-          <input
-            type="text"
-            name="province"
-            value={filters.province}
+          <select
+            name="ward"
+            value={filters.ward}
             onChange={handleChange}
-            placeholder="VD: TP. Hồ Chí Minh"
             className="
-              w-full
-              h-10
-              px-3
-              bg-white
-              border border-gray-200
-              rounded-xl
-              text-sm
-              text-gray-700
-              placeholder:text-gray-400
-              outline-none
-              focus:border-[#ffba00]
-              focus:ring-4
-              focus:ring-[#ffba00]/10
-            "
-          />
+      w-full
+      h-10
+      px-3
+      bg-white
+      border border-gray-200
+      rounded-xl
+      text-sm
+      text-gray-700
+      outline-none
+      focus:border-[#ffba00]
+      focus:ring-4
+      focus:ring-[#ffba00]/10
+    "
+          >
+            <option value="">Tất cả phường</option>
+
+            {HO_CHI_MINH_WARDS.map((ward) => (
+              <option key={ward} value={ward}>
+                {ward}
+              </option>
+            ))}
+          </select>
         </div>
 
         {/* RESET */}

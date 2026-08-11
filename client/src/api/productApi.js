@@ -12,7 +12,7 @@ export const getProducts = (filters) => {
       keyword: filters.keyword,
       category: filters.category,
       status: filters.status,
-      province: filters.province,
+      ward: filters.ward,
     },
   });
 };

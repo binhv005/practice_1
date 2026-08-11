@@ -121,7 +121,7 @@ function ProductCard({ product, onClick, getStatusLabel, getStatusClass }) {
           <div className="flex items-center gap-2 text-sm text-gray-600">
             <span className="text-gray-400">⌖</span>
             <span className="truncate">
-              {product.address?.district ? `${product.address.district}, ` : ""}
+              {product.address?.ward ? `${product.address.ward}, ` : ""}
               {product.address?.province || "Không xác định"}
             </span>
           </div>

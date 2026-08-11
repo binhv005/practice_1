@@ -173,8 +173,8 @@ function ProductDetailModal({
                     <InfoRow
                       label="Vị trí"
                       value={
-                        detailProduct.address?.district
-                          ? `${detailProduct.address.district}, ${
+                        detailProduct.address?.ward
+                          ? `${detailProduct.address.ward}, ${
                               detailProduct.address?.province || ""
                             }`
                           : detailProduct.address?.province || "Không xác định"
@@ -299,7 +299,7 @@ function ProductDetailModal({
 
                   <InfoCard
                     label="Quận / Huyện"
-                    value={detailProduct.address?.district || "Không xác định"}
+                    value={detailProduct.address?.ward || "Không xác định"}
                   />
 
                   <InfoCard

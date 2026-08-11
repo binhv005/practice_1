@@ -1,3 +1,5 @@
+import HO_CHI_MINH_WARDS from "../../constants/hoChiMinhWards";
+
 function ProductCreateModal({
   productForm,
   categories,
@@ -153,60 +155,40 @@ function ProductCreateModal({
                   </select>
                 </div>
 
-                {/* PROVINCE */}
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-1.5">
-                    Tỉnh / Thành phố <span className="text-red-500">*</span>
-                  </label>
-
-                  <input
-                    type="text"
-                    name="province"
-                    value={productForm.address.province}
-                    onChange={handleAddressChange}
-                    placeholder="TP. Hồ Chí Minh"
-                    required
-                    className="
-                      w-full
-                      h-11
-                      px-3.5
-                      rounded-xl
-                      border border-gray-200
-                      text-sm
-                      outline-none
-                      focus:border-[#ffba00]
-                      focus:ring-4
-                      focus:ring-[#ffba00]/10
-                    "
-                  />
-                </div>
-
                 {/* DISTRICT */}
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-1.5">
-                    Quận / Huyện <span className="text-red-500">*</span>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Phường
                   </label>
 
-                  <input
-                    type="text"
-                    name="district"
-                    value={productForm.address.district}
+                  <select
+                    name="ward"
+                    value={productForm.address.ward}
                     onChange={handleAddressChange}
-                    placeholder="Thủ Đức"
-                    required
                     className="
-                      w-full
-                      h-11
-                      px-3.5
-                      rounded-xl
-                      border border-gray-200
-                      text-sm
-                      outline-none
-                      focus:border-[#ffba00]
-                      focus:ring-4
-                      focus:ring-[#ffba00]/10
-                    "
-                  />
+      w-full
+      h-11
+      px-3
+      rounded-xl
+      border
+      border-gray-200
+      bg-white
+      text-sm
+      text-gray-700
+      outline-none
+      focus:border-[#ffba00]
+      focus:ring-2
+      focus:ring-[#fff3d1]
+    "
+                  >
+                    <option value="">Chọn phường</option>
+
+                    {HO_CHI_MINH_WARDS.map((ward) => (
+                      <option key={ward} value={ward}>
+                        {ward}
+                      </option>
+                    ))}
+                  </select>
                 </div>
 
                 {/* DESCRIPTION */}
