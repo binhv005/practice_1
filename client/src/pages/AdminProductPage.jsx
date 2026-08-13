@@ -17,7 +17,7 @@ import {
 
 import { getCategories } from "../api/categoryApi";
 
-function ProductPage() {
+function AdminProductPage() {
   // PRODUCTS
 
   const [products, setProducts] = useState([]);
@@ -53,7 +53,6 @@ function ProductPage() {
 
   const [selectedImages, setSelectedImages] = useState([]);
   const [previewImages, setPreviewImages] = useState([]);
-
   const [uploading, setUploading] = useState(false);
   const [creating, setCreating] = useState(false);
 
@@ -461,11 +460,28 @@ function ProductPage() {
   // RENDER
 
   return (
-    <div className="min-h-screen bg-[#f7f7f7]">
+    <div
+      className="
+    min-h-screen
+    bg-gradient-to-br
+    from-[#fffdf5]
+    via-[#faf9f5]
+    to-[#f4f6f8]
+  "
+    >
       {/* PAGE HEADER */}
-      <header className="bg-white border-b border-gray-200">
+      <header
+        className="
+    border-b border-yellow-100
+    bg-gradient-to-r
+    from-[#fff8df]
+    via-[#fffaf0]
+    to-white
+  "
+      >
         <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 py-5">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            {/* LEFT - Page information */}
             <div>
               <div className="flex items-center gap-2 text-xs text-gray-400 mb-1">
                 <span>Quản trị</span>
@@ -482,34 +498,154 @@ function ProductPage() {
               </p>
             </div>
 
-            <button
-              type="button"
-              onClick={() => setShowCreateForm(true)}
-              className="
-                inline-flex
-                items-center
-                justify-center
-                gap-2
-                h-11
-                px-5
-                rounded-xl
-                bg-[#ffba00]
-                hover:bg-[#eaaa00]
-                text-gray-900
-                font-bold
-                text-sm
-                shadow-sm
-                transition
-                whitespace-nowrap
-              "
-            >
-              <span className="text-lg leading-none">+</span>
-              Đăng tin
-            </button>
+            {/* RIGHT - Admin actions */}
+            <div className="flex items-center gap-2 sm:gap-3">
+              {/* Notification */}
+              <button
+                type="button"
+                className="
+            relative
+            w-11 h-11
+            flex items-center justify-center
+            rounded-xl
+            text-gray-600
+            hover:text-[#d99d00]
+            hover:bg-[#fff7df]
+            transition
+          "
+                title="Thông báo"
+              >
+                {/* Bell icon */}
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  strokeWidth={1.8}
+                  stroke="currentColor"
+                  className="w-5 h-5"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M14.857 17.082a23.848 23.848 0 0 1-5.714 0
+              M18 8.25a6 6 0 0 0-12 0c0 7.007-3 7.007-3 9.75
+              h18c0-2.743-3-2.743-3-9.75
+              M13.73 21a2 2 0 0 1-3.46 0"
+                  />
+                </svg>
+
+                {/* Notification badge */}
+                <span
+                  className="
+              absolute
+              top-2
+              right-2
+              min-w-[16px]
+              h-4
+              px-1
+              rounded-full
+              bg-red-500
+              text-white
+              text-[10px]
+              font-bold
+              flex items-center justify-center
+              border-2 border-white
+            "
+                >
+                  3
+                </span>
+              </button>
+
+              {/* Message */}
+              <button
+                type="button"
+                className="
+            relative
+            w-11 h-11
+            flex items-center justify-center
+            rounded-xl
+            text-gray-600
+            hover:text-[#d99d00]
+            hover:bg-[#fff7df]
+            transition
+          "
+                title="Tin nhắn"
+              >
+                {/* Message icon */}
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  strokeWidth={1.8}
+                  stroke="currentColor"
+                  className="w-5 h-5"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M8.625 9.75h6.75
+              M8.625 13.5h4.5
+              M21 12c0 4.556-4.03 8.25-9 8.25
+              a9.76 9.76 0 0 1-3.807-.763L3 20.25l1.267-3.8
+              A8.178 8.178 0 0 1 3 12
+              c0-4.556 4.03-8.25 9-8.25s9 3.694 9 8.25Z"
+                  />
+                </svg>
+
+                {/* Message badge */}
+                <span
+                  className="
+              absolute
+              top-2
+              right-2
+              w-2
+              h-2
+              rounded-full
+              bg-red-500
+              border-2 border-white
+            "
+                />
+              </button>
+
+              {/* Divider */}
+              <div className="hidden sm:block w-px h-9 bg-yellow-200 mx-1" />
+
+              {/* Admin information */}
+              <div className="flex items-center gap-3">
+                {/* Name + role */}
+                <div className="hidden sm:block text-right">
+                  <p className="text-sm font-semibold text-gray-900 leading-5">
+                    Bình Võ
+                  </p>
+
+                  <p className="text-xs text-gray-500">Administrator</p>
+                </div>
+
+                {/* Avatar */}
+                <button
+                  type="button"
+                  className="
+              w-11 h-11
+              rounded-full
+              bg-[#ffba00]
+              hover:bg-[#eaaa00]
+              flex items-center justify-center
+              text-gray-900
+              font-bold
+              text-sm
+              shadow-sm
+              ring-2 ring-white
+              transition
+            "
+                  title="Tài khoản"
+                >
+                  BV
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       </header>
-
       {/* MAIN */}
       <main className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 py-5 sm:py-6">
         {/* FILTER */}
@@ -664,7 +800,6 @@ function ProductPage() {
           </>
         )}
       </main>
-
       {/* CREATE MODAL */}
       {showCreateForm && (
         <ProductCreateModal
@@ -682,7 +817,6 @@ function ProductPage() {
           handleCloseCreateForm={handleCloseCreateForm}
         />
       )}
-
       {/* DETAIL MODAL */}
       {showDetail && (
         <ProductDetailModal
@@ -701,4 +835,4 @@ function ProductPage() {
   );
 }
 
-export default ProductPage;
+export default AdminProductPage;
