@@ -138,7 +138,6 @@ function ProductDetailModal({
             <div className="p-5 sm:p-6">
               {/* TOP */}
               <div className="grid grid-cols-1 lg:grid-cols-[1.05fr_0.95fr] gap-6">
-                {/* ================= GALLERY ================= */}
                 <div>
                   {/* MAIN IMAGE */}
                   <div className="relative aspect-[4/3] bg-gray-100 rounded-2xl overflow-hidden">
@@ -300,7 +299,7 @@ function ProductDetailModal({
                   )}
                 </div>
 
-                {/* ================= SUMMARY ================= */}
+                {/*SUMMARY*/}
                 <div>
                   <div className="flex flex-wrap items-center gap-2">
                     <span
@@ -427,7 +426,6 @@ function ProductDetailModal({
                   </div>
                 </div>
               </div>
-
               {/* DESCRIPTION */}
               <section className="mt-6 p-5 rounded-2xl bg-gray-50 border border-gray-100">
                 <h3 className="font-bold text-gray-900">Mô tả sản phẩm</h3>
@@ -437,73 +435,115 @@ function ProductDetailModal({
                     "Không có mô tả cho sản phẩm này."}
                 </p>
               </section>
-
               {/* PRODUCT INFO */}
               <section className="mt-6">
                 <h3 className="font-bold text-gray-900 mb-3">
                   Thông tin sản phẩm
                 </h3>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                  <InfoCard label="Tên sản phẩm" value={detailProduct.title} />
+                <div className="border border-gray-200 rounded-xl overflow-hidden bg-white">
+                  <table className="w-full text-sm">
+                    <tbody>
+                      <tr className="border-b border-gray-100">
+                        <td className="w-1/3 px-4 py-3 font-medium text-gray-500 bg-gray-50">
+                          Tên sản phẩm
+                        </td>
+                        <td className="px-4 py-3 text-gray-900 font-medium">
+                          {detailProduct.title || "Không xác định"}
+                        </td>
+                      </tr>
 
-                  <InfoCard
-                    label="Danh mục"
-                    value={detailProduct.category?.name || "Không xác định"}
-                  />
+                      <tr className="border-b border-gray-100">
+                        <td className="px-4 py-3 font-medium text-gray-500 bg-gray-50">
+                          Danh mục
+                        </td>
+                        <td className="px-4 py-3 text-gray-900">
+                          {detailProduct.category?.name || "Không xác định"}
+                        </td>
+                      </tr>
 
-                  <InfoCard
-                    label="Trạng thái"
-                    value={getStatusLabel(detailProduct.status)}
-                  />
+                      <tr className="border-b border-gray-100">
+                        <td className="px-4 py-3 font-medium text-gray-500 bg-gray-50">
+                          Trạng thái
+                        </td>
+                        <td className="px-4 py-3 text-gray-900">
+                          {getStatusLabel(detailProduct.status)}
+                        </td>
+                      </tr>
 
-                  <InfoCard
-                    label="Tỉnh / Thành phố"
-                    value={detailProduct.address?.province || "Không xác định"}
-                  />
+                      <tr className="border-b border-gray-100">
+                        <td className="px-4 py-3 font-medium text-gray-500 bg-gray-50">
+                          Tỉnh / Thành phố
+                        </td>
+                        <td className="px-4 py-3 text-gray-900">
+                          {detailProduct.address?.province || "Không xác định"}
+                        </td>
+                      </tr>
 
-                  <InfoCard
-                    label="Phường"
-                    value={detailProduct.address?.ward || "Không xác định"}
-                  />
+                      <tr className="border-b border-gray-100">
+                        <td className="px-4 py-3 font-medium text-gray-500 bg-gray-50">
+                          Phường
+                        </td>
+                        <td className="px-4 py-3 text-gray-900">
+                          {detailProduct.address?.ward || "Không xác định"}
+                        </td>
+                      </tr>
 
-                  <InfoCard
-                    label="Ưu tiên"
-                    value={
-                      detailProduct.featured ? "Đang được ưu tiên" : "Không"
-                    }
-                  />
+                      <tr>
+                        <td className="px-4 py-3 font-medium text-gray-500 bg-gray-50">
+                          Ưu tiên
+                        </td>
+                        <td className="px-4 py-3 text-gray-900">
+                          {detailProduct.featured
+                            ? "Đang được ưu tiên"
+                            : "Không"}
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
                 </div>
               </section>
-
-              {/* GIVER */}
+              {/* GIVER INFO */}
               <section className="mt-6 border-t border-gray-100 pt-6">
-                <h3 className="font-bold text-gray-900 mb-4">
+                <h3 className="font-bold text-gray-900 mb-3">
                   Thông tin người cho
                 </h3>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <InfoCard
-                    label="Họ tên"
-                    value={
-                      detailProduct.giver?.fullname ||
-                      detailProduct.giver?.name ||
-                      "Không có thông tin"
-                    }
-                  />
+                <div className="border border-gray-200 rounded-xl overflow-hidden bg-white">
+                  <table className="w-full text-sm">
+                    <tbody>
+                      <tr className="border-b border-gray-100">
+                        <td className="w-1/3 px-4 py-3 font-medium text-gray-500 bg-gray-50">
+                          Họ tên
+                        </td>
+                        <td className="px-4 py-3 text-gray-900 font-medium">
+                          {detailProduct.giver?.fullname ||
+                            detailProduct.giver?.name ||
+                            "Không có thông tin"}
+                        </td>
+                      </tr>
 
-                  <InfoCard
-                    label="Email"
-                    value={detailProduct.giver?.email || "Không có thông tin"}
-                  />
+                      <tr className="border-b border-gray-100">
+                        <td className="px-4 py-3 font-medium text-gray-500 bg-gray-50">
+                          Email
+                        </td>
+                        <td className="px-4 py-3 text-gray-900">
+                          {detailProduct.giver?.email || "Không có thông tin"}
+                        </td>
+                      </tr>
 
-                  <InfoCard
-                    label="Số điện thoại"
-                    value={detailProduct.giver?.phone || "Không có thông tin"}
-                  />
+                      <tr>
+                        <td className="px-4 py-3 font-medium text-gray-500 bg-gray-50">
+                          Số điện thoại
+                        </td>
+                        <td className="px-4 py-3 text-gray-900">
+                          {detailProduct.giver?.phone || "Không có thông tin"}
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
                 </div>
               </section>
-
               {/* CLOSE */}
               <div className="flex justify-end mt-6">
                 <button
