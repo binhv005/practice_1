@@ -1,57 +1,104 @@
 const mongoose = require("mongoose");
+
 const Product = require("../models/Product");
 const Category = require("../models/Category");
 const User = require("../models/User");
 const AuditLog = require("../models/AuditLog");
 const Notification = require("../models/Notification");
+
 const { processProductImage } = require("../services/imageService");
+
+const HO_CHI_MINH_WARDS = require("../constants/hoChiMinhWards");
+
+const HCM_PROVINCE = "Thành phố Hồ Chí Minh";
+
+const ALLOWED_STATUSES = ["giving", "processing", "given", "hidden"];
+
+// GET PRODUCTS
 
 const getProducts = async (req, res) => {
   try {
-    const { keyword, category, status, province } = req.query;
+    const { keyword, category, status, ward } = req.query;
 
     const filter = {};
 
-    // TÌM KIẾM THEO TÊN + MÔ TẢ
+    // KEYWORD
+
     if (keyword && keyword.trim()) {
+      const searchKeyword = keyword.trim();
+
       filter.$or = [
         {
           title: {
-            $regex: keyword.trim(),
+            $regex: searchKeyword,
             $options: "i",
           },
         },
         {
           description: {
-            $regex: keyword.trim(),
+            $regex: searchKeyword,
             $options: "i",
           },
         },
       ];
     }
 
-    // Filter category
+    // CATEGORY
+
     if (category) {
+      if (!mongoose.Types.ObjectId.isValid(category)) {
+        return res.status(400).json({
+          success: false,
+          message: "Category ID không hợp lệ",
+        });
+      }
+
       filter.category = category;
     }
 
-    // Filter status
+    // =========================
+    // STATUS
+    // =========================
+
     if (status) {
+      if (!ALLOWED_STATUSES.includes(status)) {
+        return res.status(400).json({
+          success: false,
+          message: "Status không hợp lệ",
+        });
+      }
+
       filter.status = status;
     }
 
-    // Filter province
-    if (province && province.trim()) {
-      filter["address.province"] = {
-        $regex: province.trim(),
-        $options: "i",
-      };
+    // =========================
+    // WARD
+    // =========================
+
+    if (ward && ward.trim()) {
+      const selectedWard = ward.trim();
+
+      if (!HO_CHI_MINH_WARDS.includes(selectedWard)) {
+        return res.status(400).json({
+          success: false,
+          message: "Phường không hợp lệ",
+        });
+      }
+
+      filter["address.ward"] = selectedWard;
     }
+
+    // =========================
+    // GET PRODUCTS
+    // =========================
 
     const products = await Product.find(filter)
       .populate("category")
       .populate("giver")
-      .sort({ createdAt: -1 });
+      .sort({
+        featured: -1,
+        publishAt: -1,
+      });
 
     return res.status(200).json({
       success: true,
@@ -67,9 +114,17 @@ const getProducts = async (req, res) => {
   }
 };
 
+// ======================================================
+// GET PRODUCT BY ID
+// ======================================================
+
 const getProductById = async (req, res) => {
   try {
     const { id } = req.params;
+
+    // =========================
+    // VALIDATE ID
+    // =========================
 
     if (!mongoose.Types.ObjectId.isValid(id)) {
       return res.status(400).json({
@@ -78,9 +133,14 @@ const getProductById = async (req, res) => {
       });
     }
 
+    // =========================
+    // FIND PRODUCT
+    // =========================
+
     const product = await Product.findById(id)
       .populate("category")
-      .populate("giver");
+      .populate("giver")
+      .populate("receiver");
 
     if (!product) {
       return res.status(404).json({
@@ -89,25 +149,32 @@ const getProductById = async (req, res) => {
       });
     }
 
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
       data: product,
     });
   } catch (error) {
     console.error("Get product by id error:", error);
 
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       message: "Không thể lấy thông tin sản phẩm",
     });
   }
 };
 
+// ======================================================
+// CREATE PRODUCT
+// ======================================================
+
 const createProduct = async (req, res) => {
   try {
     const { title, description, images, category, address } = req.body;
 
-    // 1. VALIDATE TITLE
+    // =========================
+    // TITLE
+    // =========================
+
     if (!title || !title.trim()) {
       return res.status(400).json({
         success: false,
@@ -115,7 +182,17 @@ const createProduct = async (req, res) => {
       });
     }
 
-    // 2. VALIDATE DESCRIPTION
+    if (title.trim().length > 200) {
+      return res.status(400).json({
+        success: false,
+        message: "Tên sản phẩm không được vượt quá 200 ký tự",
+      });
+    }
+
+    // =========================
+    // DESCRIPTION
+    // =========================
+
     if (!description || !description.trim()) {
       return res.status(400).json({
         success: false,
@@ -123,7 +200,17 @@ const createProduct = async (req, res) => {
       });
     }
 
-    // 3. VALIDATE CATEGORY
+    if (description.trim().length > 5000) {
+      return res.status(400).json({
+        success: false,
+        message: "Mô tả sản phẩm không được vượt quá 5000 ký tự",
+      });
+    }
+
+    // =========================
+    // CATEGORY
+    // =========================
+
     if (!category) {
       return res.status(400).json({
         success: false,
@@ -154,15 +241,30 @@ const createProduct = async (req, res) => {
       });
     }
 
-    // 4. VALIDATE IMAGES
-    if (images !== undefined && !Array.isArray(images)) {
-      return res.status(400).json({
-        success: false,
-        message: "images phải là một mảng",
-      });
+    // =========================
+    // IMAGES
+    // =========================
+
+    if (images !== undefined) {
+      if (!Array.isArray(images)) {
+        return res.status(400).json({
+          success: false,
+          message: "images phải là một mảng",
+        });
+      }
+
+      if (images.length > 10) {
+        return res.status(400).json({
+          success: false,
+          message: "Sản phẩm chỉ được tối đa 10 ảnh",
+        });
+      }
     }
 
-    // 5. VALIDATE ADDRESS
+    // =========================
+    // ADDRESS
+    // =========================
+
     if (!address) {
       return res.status(400).json({
         success: false,
@@ -170,21 +272,30 @@ const createProduct = async (req, res) => {
       });
     }
 
-    if (!address.province || !address.province.trim()) {
+    if (!address.ward || !address.ward.trim()) {
       return res.status(400).json({
         success: false,
-        message: "Tỉnh / thành phố không được để trống",
+        message: "Vui lòng chọn phường",
       });
     }
 
-    if (!address.district || !address.district.trim()) {
+    const ward = address.ward.trim();
+
+    // =========================
+    // VALIDATE WARD
+    // =========================
+
+    if (!HO_CHI_MINH_WARDS.includes(ward)) {
       return res.status(400).json({
         success: false,
-        message: "Quận / huyện không được để trống",
+        message: "Phường không hợp lệ",
       });
     }
 
-    // 6. LẤY GIVER
+    // =========================
+    // GIVER
+    // =========================
+
     const giverId = process.env.ADMIN_ID;
 
     if (!giverId || !mongoose.Types.ObjectId.isValid(giverId)) {
@@ -194,7 +305,6 @@ const createProduct = async (req, res) => {
       });
     }
 
-    // Kiểm tra user tồn tại
     const giverExists = await User.findById(giverId);
 
     if (!giverExists) {
@@ -204,7 +314,10 @@ const createProduct = async (req, res) => {
       });
     }
 
-    // 7. CREATE PRODUCT
+    // =========================
+    // CREATE
+    // =========================
+
     const product = await Product.create({
       title: title.trim(),
 
@@ -221,16 +334,26 @@ const createProduct = async (req, res) => {
       featured: false,
 
       address: {
-        province: address.province.trim(),
-        district: address.district.trim(),
+        province: HCM_PROVINCE,
+        ward,
       },
+
+      publishAt: new Date(),
+
+      lastInteractionAt: new Date(),
     });
 
-    // 8. POPULATE
+    // =========================
+    // POPULATE
+    // =========================
+
     await product.populate("category");
     await product.populate("giver");
 
-    // 9. RESPONSE
+    // =========================
+    // RESPONSE
+    // =========================
+
     return res.status(201).json({
       success: true,
       message: "Thêm sản phẩm thành công",
@@ -246,13 +369,18 @@ const createProduct = async (req, res) => {
   }
 };
 
+// ======================================================
+// UPDATE PRODUCT
+// ======================================================
+
 const updateProduct = async (req, res) => {
   try {
-    // 1. Lấy Product ID
-
     const { id } = req.params;
 
-    // Kiểm tra ObjectId
+    // =========================
+    // VALIDATE ID
+    // =========================
+
     if (!mongoose.Types.ObjectId.isValid(id)) {
       return res.status(400).json({
         success: false,
@@ -260,7 +388,9 @@ const updateProduct = async (req, res) => {
       });
     }
 
-    // 2. Tìm Product
+    // =========================
+    // FIND PRODUCT
+    // =========================
 
     const product = await Product.findById(id);
 
@@ -271,7 +401,9 @@ const updateProduct = async (req, res) => {
       });
     }
 
-    // 3. Xác định Admin
+    // =========================
+    // ADMIN
+    // =========================
 
     const adminId = process.env.ADMIN_ID;
 
@@ -282,7 +414,9 @@ const updateProduct = async (req, res) => {
       });
     }
 
-    // 4. Lưu dữ liệu BEFORE
+    // =========================
+    // BEFORE
+    // =========================
 
     const before = {
       title: product.title,
@@ -291,15 +425,66 @@ const updateProduct = async (req, res) => {
       category: product.category,
       status: product.status,
       featured: product.featured,
-      address: product.address,
+      address: {
+        province: product.address?.province,
+        ward: product.address?.ward,
+      },
     };
 
-    // 5. Lấy dữ liệu từ request
+    // =========================
+    // REQUEST DATA
+    // =========================
 
     const { title, description, images, category, status, featured, address } =
       req.body;
 
-    // 6. Kiểm tra Category
+    // =========================
+    // TITLE
+    // =========================
+
+    if (title !== undefined) {
+      if (!title.trim()) {
+        return res.status(400).json({
+          success: false,
+          message: "Tên sản phẩm không được để trống",
+        });
+      }
+
+      if (title.trim().length > 200) {
+        return res.status(400).json({
+          success: false,
+          message: "Tên sản phẩm không được vượt quá 200 ký tự",
+        });
+      }
+
+      product.title = title.trim();
+    }
+
+    // =========================
+    // DESCRIPTION
+    // =========================
+
+    if (description !== undefined) {
+      if (!description.trim()) {
+        return res.status(400).json({
+          success: false,
+          message: "Mô tả sản phẩm không được để trống",
+        });
+      }
+
+      if (description.trim().length > 5000) {
+        return res.status(400).json({
+          success: false,
+          message: "Mô tả sản phẩm không được vượt quá 5000 ký tự",
+        });
+      }
+
+      product.description = description.trim();
+    }
+
+    // =========================
+    // CATEGORY
+    // =========================
 
     if (category !== undefined) {
       if (!mongoose.Types.ObjectId.isValid(category)) {
@@ -324,30 +509,59 @@ const updateProduct = async (req, res) => {
           message: "Không thể chuyển sản phẩm sang danh mục đang inactive",
         });
       }
+
+      product.category = category;
     }
 
-    // 7. Kiểm tra status
+    // =========================
+    // STATUS
+    // =========================
 
-    const allowedStatuses = ["giving", "processing", "given", "hidden"];
+    if (status !== undefined) {
+      if (!ALLOWED_STATUSES.includes(status)) {
+        return res.status(400).json({
+          success: false,
+          message: "Status không hợp lệ",
+        });
+      }
 
-    if (status !== undefined && !allowedStatuses.includes(status)) {
-      return res.status(400).json({
-        success: false,
-        message: "Status không hợp lệ",
-      });
+      if (status === "hidden" && product.status === "processing") {
+        return res.status(400).json({
+          success: false,
+          message:
+            "Sản phẩm đang có giao dịch phát sinh, không thể ẩn trực tiếp",
+        });
+      }
+
+      product.status = status;
     }
 
-    // 8. Không cho ẩn sản phẩm đang giao dịch
+    // =========================
+    // FEATURED
+    // =========================
 
-    if (status === "hidden" && product.status === "processing") {
-      return res.status(400).json({
-        success: false,
-        message:
-          "Sản phẩm đang có giao dịch phát sinh, không thể xóa trực tiếp",
-      });
+    if (featured !== undefined) {
+      if (typeof featured !== "boolean") {
+        return res.status(400).json({
+          success: false,
+          message: "featured phải là boolean",
+        });
+      }
+
+      // Không cho sản phẩm hidden được featured
+      if (featured === true && product.status === "hidden") {
+        return res.status(400).json({
+          success: false,
+          message: "Không thể đặt nổi bật cho sản phẩm đã ẩn",
+        });
+      }
+
+      product.featured = featured;
     }
 
-    // 9. Kiểm tra images
+    // =========================
+    // IMAGES
+    // =========================
 
     if (images !== undefined) {
       if (!Array.isArray(images)) {
@@ -357,40 +571,52 @@ const updateProduct = async (req, res) => {
         });
       }
 
+      if (images.length > 10) {
+        return res.status(400).json({
+          success: false,
+          message: "Sản phẩm chỉ được tối đa 10 ảnh",
+        });
+      }
+
       product.images = images;
     }
 
-    // 10. Update các field
-
-    if (title !== undefined) {
-      product.title = title;
-    }
-
-    if (description !== undefined) {
-      product.description = description;
-    }
-
-    if (category !== undefined) {
-      product.category = category;
-    }
-
-    if (status !== undefined) {
-      product.status = status;
-    }
-
-    if (featured !== undefined) {
-      product.featured = featured;
-    }
+    // =========================
+    // ADDRESS
+    // =========================
 
     if (address !== undefined) {
-      product.address = address;
+      if (!address.ward || !address.ward.trim()) {
+        return res.status(400).json({
+          success: false,
+          message: "Vui lòng chọn phường",
+        });
+      }
+
+      const ward = address.ward.trim();
+
+      if (!HO_CHI_MINH_WARDS.includes(ward)) {
+        return res.status(400).json({
+          success: false,
+          message: "Phường không hợp lệ",
+        });
+      }
+
+      product.address = {
+        province: HCM_PROVINCE,
+        ward,
+      };
     }
 
-    // 11. Lưu Product
+    // =========================
+    // SAVE
+    // =========================
 
     const updatedProduct = await product.save();
 
-    // 12. Lưu dữ liệu AFTER
+    // =========================
+    // AFTER
+    // =========================
 
     const after = {
       title: updatedProduct.title,
@@ -399,14 +625,15 @@ const updateProduct = async (req, res) => {
       category: updatedProduct.category,
       status: updatedProduct.status,
       featured: updatedProduct.featured,
-      address: updatedProduct.address,
+      address: {
+        province: updatedProduct.address?.province,
+        ward: updatedProduct.address?.ward,
+      },
     };
-
-    // 13. Xác định action
 
     let action = "UPDATE_PRODUCT";
 
-    if (status === "hidden") {
+    if (status === "hidden" && before.status !== "hidden") {
       action = "HIDE_PRODUCT";
     }
 
@@ -417,41 +644,40 @@ const updateProduct = async (req, res) => {
       action = "CHANGE_CATEGORY";
     }
 
-    // 14. Ghi AuditLog
-
     await AuditLog.create({
-      adminId: adminId,
+      adminId,
       productId: updatedProduct._id,
       action,
       before,
       after,
     });
 
-    // 15. Tạo Notification
-
     await Notification.create({
       receiver_id: updatedProduct.giver,
-      title: "Sản phẩm đã được cập nhật",
+
+      title:
+        action === "HIDE_PRODUCT"
+          ? "Sản phẩm đã bị ẩn"
+          : "Sản phẩm đã được cập nhật",
 
       content:
-        status === "hidden"
+        action === "HIDE_PRODUCT"
           ? `Sản phẩm "${updatedProduct.title}" đã được ẩn bởi quản trị viên.`
           : `Sản phẩm "${updatedProduct.title}" đã được quản trị viên cập nhật.`,
 
-      type: status === "hidden" ? "PRODUCT_HIDDEN" : "PRODUCT_UPDATED",
+      type: action === "HIDE_PRODUCT" ? "PRODUCT_HIDDEN" : "PRODUCT_UPDATED",
     });
-
-    // 16. Populate
 
     await updatedProduct.populate("category");
     await updatedProduct.populate("giver");
 
-    // 17. Response
-
     return res.status(200).json({
       success: true,
 
-      message: "Cập nhật thành công, thông báo đã được gửi cho chủ bài viết",
+      message:
+        action === "HIDE_PRODUCT"
+          ? "Ẩn sản phẩm thành công, thông báo đã được gửi cho chủ bài viết"
+          : "Cập nhật thành công, thông báo đã được gửi cho chủ bài viết",
 
       data: updatedProduct,
     });
@@ -476,9 +702,10 @@ const uploadProductImage = async (req, res) => {
 
     const imageUrl = await processProductImage(req.file);
 
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
       message: "Upload ảnh thành công",
+
       data: {
         imageUrl,
       },
@@ -486,7 +713,7 @@ const uploadProductImage = async (req, res) => {
   } catch (error) {
     console.error("Upload product image error:", error);
 
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       message: "Không thể xử lý ảnh",
     });
@@ -502,6 +729,13 @@ const uploadProductImages = async (req, res) => {
       });
     }
 
+    if (req.files.length > 10) {
+      return res.status(400).json({
+        success: false,
+        message: "Chỉ được upload tối đa 10 ảnh",
+      });
+    }
+
     const imageUrls = [];
 
     for (const file of req.files) {
@@ -513,6 +747,7 @@ const uploadProductImages = async (req, res) => {
     return res.status(200).json({
       success: true,
       message: "Upload ảnh thành công",
+
       data: {
         imageUrls,
       },
