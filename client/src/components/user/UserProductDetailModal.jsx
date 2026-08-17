@@ -1,33 +1,222 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { ChevronLeft, ChevronRight, MessageCircle, X } from "lucide-react";
 
-function UserProductDetailModal({ product, onClose }) {
+import { createConversation } from "../../services/messageApi";
+
+function UserProductDetailModal({ product, onClose, isSaved = false, onSave }) {
+  const navigate = useNavigate();
+
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [contacting, setContacting] = useState(false);
+
+  /*
+   * ==========================================
+   * RESET IMAGE WHEN PRODUCT CHANGES
+   * ==========================================
+   */
 
   useEffect(() => {
     setCurrentImageIndex(0);
   }, [product?._id]);
 
-  if (!product) return null;
+  /*
+   * ==========================================
+   * NO PRODUCT
+   * ==========================================
+   */
 
-  const images = Array.isArray(product.images) ? product.images : [];
+  if (!product) {
+    return null;
+  }
+
+  /*
+   * ==========================================
+   * PRODUCT DATA
+   * ==========================================
+   */
+
+  const images = Array.isArray(product.images)
+    ? product.images
+    : product.image
+      ? [product.image]
+      : [];
 
   const categoryName =
     typeof product.category === "object"
       ? product.category?.name
       : product.category;
 
+  const productId = product._id || product.id;
+
   const hasImages = images.length > 0;
   const hasMultipleImages = images.length > 1;
 
+  /*
+   * ==========================================
+   * GIVER
+   * ==========================================
+   */
+
+  const giver =
+    product.giver ||
+    product.seller ||
+    product.user ||
+    product.userId ||
+    product.owner;
+
+  const giverId = typeof giver === "object" ? giver?._id || giver?.id : giver;
+
+  /*
+   * ==========================================
+   * CONTACT GIVER
+   * ==========================================
+   */
+
+  const handleContactGiver = async () => {
+    if (contacting) {
+      return;
+    }
+
+    const savedUser = localStorage.getItem("user");
+    let loggedInUserId = null;
+    if (savedUser) {
+      try {
+        const parsed = JSON.parse(savedUser);
+        loggedInUserId = parsed?._id || parsed?.id;
+      } catch (err) {
+        console.error("Parse user error:", err);
+      }
+    }
+
+    if (!loggedInUserId) {
+      alert("Vui lòng đăng nhập để liên hệ với người đăng sản phẩm.");
+      navigate("/login");
+      return;
+    }
+
+    if (!giverId) {
+      alert(
+        "Không thể liên hệ người cho vì sản phẩm chưa xác định người đăng.",
+      );
+      return;
+    }
+
+    if (giverId.toString() === loggedInUserId.toString()) {
+      alert("Bạn không thể gửi tin nhắn cho chính mình về sản phẩm này.");
+      return;
+    }
+
+    try {
+      setContacting(true);
+
+      console.log("==========================================");
+      console.log("Creating conversation with giver:", giverId);
+      console.log("Product ID:", productId);
+
+      /*
+       * ======================================
+       * CREATE / GET CONVERSATION
+       * ======================================
+       */
+
+      const response = await createConversation(giverId, productId);
+
+      console.log("CREATE CONVERSATION AXIOS RESPONSE:", response);
+
+      const responseData = response?.data || response;
+
+      console.log("CREATE CONVERSATION DATA:", responseData);
+
+      const conversation = responseData?.conversation;
+
+      console.log("CONVERSATION:", conversation);
+
+      /*
+       * ======================================
+       * VALIDATE CONVERSATION
+       * ======================================
+       */
+
+      if (!conversation?._id) {
+        console.error("Invalid conversation response:", response);
+
+        throw new Error("API tạo conversation không trả về conversation._id");
+      }
+
+      const conversationId = conversation._id;
+
+      console.log("Conversation created successfully:", conversationId);
+
+      /*
+       * ======================================
+       * CLOSE MODAL
+       * ======================================
+       */
+
+      onClose?.();
+
+      /*
+       * ======================================
+       * NAVIGATE TO MESSAGE PAGE
+       * ======================================
+       */
+
+      navigate("/messages", {
+        state: {
+          conversationId,
+          productId,
+          product,
+        },
+      });
+    } catch (error) {
+      console.error("Contact giver error:", error);
+
+      if (error?.response?.status === 401) {
+        alert("Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.");
+        navigate("/login");
+        return;
+      }
+
+      const message =
+        error?.response?.data?.message ||
+        error?.data?.message ||
+        error?.message ||
+        "Không thể mở cuộc trò chuyện. Vui lòng thử lại.";
+
+      alert(message);
+    } finally {
+      setContacting(false);
+    }
+  };
+
+  /*
+   * ==========================================
+   * IMAGE NAVIGATION
+   * ==========================================
+   */
+
   const handlePrevious = () => {
-    setCurrentImageIndex((prev) => (prev > 0 ? prev - 1 : prev));
+    if (!hasImages) {
+      return;
+    }
+
+    setCurrentImageIndex((prev) => (prev > 0 ? prev - 1 : images.length - 1));
   };
 
   const handleNext = () => {
-    setCurrentImageIndex((prev) =>
-      prev < images.length - 1 ? prev + 1 : prev,
-    );
+    if (!hasImages) {
+      return;
+    }
+
+    setCurrentImageIndex((prev) => (prev < images.length - 1 ? prev + 1 : 0));
   };
+
+  /*
+   * ==========================================
+   * RENDER
+   * ==========================================
+   */
 
   return (
     <div
@@ -59,9 +248,9 @@ function UserProductDetailModal({ product, onClose }) {
         "
         onClick={(event) => event.stopPropagation()}
       >
-        {/* =================================================
+        {/* ======================================
             HEADER
-        ================================================= */}
+        ====================================== */}
 
         <header
           className="
@@ -88,6 +277,7 @@ function UserProductDetailModal({ product, onClose }) {
           <button
             type="button"
             onClick={onClose}
+            aria-label="Đóng"
             className="
               flex
               h-9
@@ -101,19 +291,19 @@ function UserProductDetailModal({ product, onClose }) {
               hover:text-gray-900
             "
           >
-            ✕
+            <X size={20} />
           </button>
         </header>
 
-        {/* =================================================
+        {/* ======================================
             BODY
-        ================================================= */}
+        ====================================== */}
 
         <div className="overflow-y-auto">
           <div className="p-5 sm:p-6">
-            {/* =================================================
+            {/* ==================================
                 IMAGE + SUMMARY
-            ================================================= */}
+            ================================== */}
 
             <div
               className="
@@ -123,7 +313,9 @@ function UserProductDetailModal({ product, onClose }) {
                 lg:grid-cols-[1.05fr_0.95fr]
               "
             >
-              {/* IMAGE */}
+              {/* =================================
+                  IMAGE
+              ================================= */}
 
               <div>
                 <div
@@ -168,7 +360,7 @@ function UserProductDetailModal({ product, onClose }) {
                     <button
                       type="button"
                       onClick={handlePrevious}
-                      disabled={currentImageIndex === 0}
+                      aria-label="Ảnh trước"
                       className="
                         absolute
                         left-3
@@ -181,16 +373,13 @@ function UserProductDetailModal({ product, onClose }) {
                         justify-center
                         rounded-full
                         bg-white/90
-                        text-2xl
                         text-gray-700
                         shadow-md
                         transition
                         hover:bg-white
-                        disabled:cursor-not-allowed
-                        disabled:opacity-30
                       "
                     >
-                      ‹
+                      <ChevronLeft size={22} />
                     </button>
                   )}
 
@@ -200,7 +389,7 @@ function UserProductDetailModal({ product, onClose }) {
                     <button
                       type="button"
                       onClick={handleNext}
-                      disabled={currentImageIndex === images.length - 1}
+                      aria-label="Ảnh tiếp theo"
                       className="
                         absolute
                         right-3
@@ -213,16 +402,13 @@ function UserProductDetailModal({ product, onClose }) {
                         justify-center
                         rounded-full
                         bg-white/90
-                        text-2xl
                         text-gray-700
                         shadow-md
                         transition
                         hover:bg-white
-                        disabled:cursor-not-allowed
-                        disabled:opacity-30
                       "
                     >
-                      ›
+                      <ChevronRight size={22} />
                     </button>
                   )}
 
@@ -249,7 +435,9 @@ function UserProductDetailModal({ product, onClose }) {
                   )}
                 </div>
 
-                {/* THUMBNAILS */}
+                {/* =================================
+                    THUMBNAILS
+                ================================= */}
 
                 {hasMultipleImages && (
                   <div className="mt-3 grid grid-cols-5 gap-2">
@@ -259,26 +447,27 @@ function UserProductDetailModal({ product, onClose }) {
                         type="button"
                         onClick={() => setCurrentImageIndex(index)}
                         className={`
-                          relative
-                          aspect-square
-                          overflow-hidden
-                          rounded-xl
-                          border-2
-                          ${
-                            currentImageIndex === index
-                              ? "border-[#ffba00]"
-                              : "border-gray-200"
-                          }
-                        `}
+                            relative
+                            aspect-square
+                            overflow-hidden
+                            rounded-xl
+                            border-2
+                            transition
+                            ${
+                              currentImageIndex === index
+                                ? "border-[#ffba00]"
+                                : "border-gray-200 hover:border-gray-300"
+                            }
+                          `}
                       >
                         <img
                           src={image}
                           alt={`Ảnh ${index + 1}`}
                           className="
-                            h-full
-                            w-full
-                            object-cover
-                          "
+                              h-full
+                              w-full
+                              object-cover
+                            "
                         />
                       </button>
                     ))}
@@ -286,9 +475,13 @@ function UserProductDetailModal({ product, onClose }) {
                 )}
               </div>
 
-              {/* SUMMARY */}
+              {/* =================================
+                  SUMMARY
+              ================================= */}
 
               <div>
+                {/* FEATURED */}
+
                 {product.featured && (
                   <span
                     className="
@@ -305,6 +498,8 @@ function UserProductDetailModal({ product, onClose }) {
                     ★ Nổi bật
                   </span>
                 )}
+
+                {/* TITLE */}
 
                 <h1
                   className="
@@ -367,12 +562,89 @@ function UserProductDetailModal({ product, onClose }) {
                     Miễn phí
                   </span>
                 </div>
+
+                {/* =================================
+                    CONTACT GIVER
+                ================================= */}
+
+                <button
+                  type="button"
+                  onClick={handleContactGiver}
+                  disabled={contacting || !giverId}
+                  className="
+                    mt-5
+                    flex
+                    h-12
+                    w-full
+                    items-center
+                    justify-center
+                    gap-2
+                    rounded-xl
+                    bg-[#ffba00]
+                    px-5
+                    text-sm
+                    font-bold
+                    text-gray-950
+                    shadow-sm
+                    transition
+                    hover:bg-[#eaaa00]
+                    hover:shadow-md
+                    active:scale-[0.99]
+                    disabled:cursor-not-allowed
+                    disabled:opacity-60
+                  "
+                >
+                  <MessageCircle size={20} />
+
+                  {contacting
+                    ? "Đang mở cuộc trò chuyện..."
+                    : "Liên hệ người cho"}
+                </button>
+
+                {!giverId && (
+                  <p className="mt-2 text-center text-xs text-red-400">
+                    Không xác định được người đăng sản phẩm.
+                  </p>
+                )}
+
+                {/* =================================
+                    SAVE
+                ================================= */}
+
+                {onSave && (
+                  <button
+                    type="button"
+                    onClick={() => onSave(productId)}
+                    className={`
+                      mt-3
+                      flex
+                      h-11
+                      w-full
+                      items-center
+                      justify-center
+                      gap-2
+                      rounded-xl
+                      text-sm
+                      font-semibold
+                      transition
+                      ${
+                        isSaved
+                          ? "bg-yellow-100 text-[#9a6700] hover:bg-yellow-200"
+                          : "border border-gray-200 bg-white text-gray-700 hover:bg-gray-50"
+                      }
+                    `}
+                  >
+                    <span className="text-lg">{isSaved ? "★" : "☆"}</span>
+
+                    {isSaved ? "Đã lưu sản phẩm" : "Lưu sản phẩm"}
+                  </button>
+                )}
               </div>
             </div>
 
-            {/* =================================================
+            {/* ==================================
                 DESCRIPTION
-            ================================================= */}
+            ================================== */}
 
             <section
               className="
@@ -399,9 +671,9 @@ function UserProductDetailModal({ product, onClose }) {
               </p>
             </section>
 
-            {/* =================================================
-                PUBLIC INFORMATION
-            ================================================= */}
+            {/* ==================================
+                PRODUCT INFORMATION
+            ================================== */}
 
             <section className="mt-6">
               <h3 className="mb-3 font-bold text-gray-900">
@@ -457,9 +729,70 @@ function UserProductDetailModal({ product, onClose }) {
               </div>
             </section>
 
-            {/* =================================================
+            {/* ==================================
+                GIVER
+            ================================== */}
+
+            {giver && (
+              <section className="mt-6">
+                <h3 className="mb-3 font-bold text-gray-900">Người cho</h3>
+
+                <div
+                  className="
+                    flex
+                    items-center
+                    gap-3
+                    rounded-xl
+                    border
+                    border-gray-200
+                    bg-white
+                    p-4
+                  "
+                >
+                  {giver.avatar ? (
+                    <img
+                      src={giver.avatar}
+                      alt={giver.fullname || "Người cho"}
+                      className="
+                        h-11
+                        w-11
+                        rounded-full
+                        object-cover
+                      "
+                    />
+                  ) : (
+                    <div
+                      className="
+                        flex
+                        h-11
+                        w-11
+                        items-center
+                        justify-center
+                        rounded-full
+                        bg-[#ffba00]
+                        font-bold
+                      "
+                    >
+                      {(giver.fullname || "N").charAt(0).toUpperCase()}
+                    </div>
+                  )}
+
+                  <div>
+                    <p className="font-semibold text-gray-900">
+                      {giver.fullname || "Người dùng"}
+                    </p>
+
+                    <p className="mt-0.5 text-xs text-gray-400">
+                      Người đăng sản phẩm
+                    </p>
+                  </div>
+                </div>
+              </section>
+            )}
+
+            {/* ==================================
                 CLOSE
-            ================================================= */}
+            ================================== */}
 
             <div className="mt-6 flex justify-end">
               <button
@@ -487,9 +820,11 @@ function UserProductDetailModal({ product, onClose }) {
   );
 }
 
-// =========================================================
-// INFO ROW
-// =========================================================
+/*
+ * ============================================
+ * INFO ROW
+ * ============================================
+ */
 
 function InfoRow({ label, value }) {
   return (

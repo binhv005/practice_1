@@ -1,52 +1,55 @@
 import { useEffect, useState } from "react";
+import {
+  X,
+  ChevronLeft,
+  ChevronRight,
+  MapPin,
+  CalendarDays,
+} from "lucide-react";
 
-function ProductDetailModal({
-  detailProduct,
-  loadingDetail,
-  updatingFeatured,
-  hiding,
-  getStatusLabel,
-  getStatusClass,
-  handleToggleFeatured,
-  handleHideProduct,
-  onClose,
-}) {
-  // IMAGE GALLERY
-
+function UserProductDetailModal({ product, isSaved = false, onSave, onClose }) {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
-  // Khi đổi sang sản phẩm khác -> quay về ảnh đầu tiên
   useEffect(() => {
     setCurrentImageIndex(0);
-  }, [detailProduct?._id]);
+  }, [product?._id]);
 
-  const images = detailProduct?.images || [];
+  if (!product) {
+    return null;
+  }
+
+  const images = Array.isArray(product.images)
+    ? product.images
+    : product.image
+      ? [product.image]
+      : [];
 
   const hasImages = images.length > 0;
   const hasMultipleImages = images.length > 1;
 
-  const handlePreviousImage = () => {
-    setCurrentImageIndex((prev) => {
-      if (prev === 0) {
-        return 0;
-      }
+  const productId = product._id || product.id;
 
-      return prev - 1;
-    });
+  const categoryName =
+    typeof product.category === "object"
+      ? product.category?.name
+      : product.category;
+
+  const handlePreviousImage = () => {
+    setCurrentImageIndex((prev) => (prev === 0 ? images.length - 1 : prev - 1));
   };
 
   const handleNextImage = () => {
-    setCurrentImageIndex((prev) => {
-      if (prev === images.length - 1) {
-        return prev;
-      }
-
-      return prev + 1;
-    });
+    setCurrentImageIndex((prev) => (prev === images.length - 1 ? 0 : prev + 1));
   };
 
   const handleThumbnailClick = (index) => {
     setCurrentImageIndex(index);
+  };
+
+  const handleSave = () => {
+    if (onSave && productId) {
+      onSave(productId);
+    }
   };
 
   return (
@@ -55,542 +58,529 @@ function ProductDetailModal({
         fixed
         inset-0
         z-50
-        bg-black/60
-        backdrop-blur-sm
         flex
         items-center
         justify-center
+        bg-black/60
         p-3
+        backdrop-blur-sm
         sm:p-6
       "
       onClick={onClose}
     >
       <div
         className="
-          bg-white
-          rounded-2xl
-          shadow-2xl
+          flex
+          max-h-[94vh]
           w-full
           max-w-5xl
-          max-h-[94vh]
-          overflow-hidden
-          flex
           flex-col
+          overflow-hidden
+          rounded-2xl
+          bg-white
+          shadow-2xl
         "
-        onClick={(e) => e.stopPropagation()}
+        onClick={(event) => event.stopPropagation()}
       >
         {/* HEADER */}
-        <header className="px-5 sm:px-6 py-4 border-b border-gray-200 flex items-center justify-between">
-          <div>
-            <h2 className="text-lg sm:text-xl font-bold text-gray-900">
+        <header
+          className="
+            flex
+            items-center
+            justify-between
+            border-b
+            border-gray-100
+            px-5
+            py-4
+            sm:px-6
+          "
+        >
+          <div className="min-w-0">
+            <h2 className="text-lg font-bold text-gray-900 sm:text-xl">
               Chi tiết sản phẩm
             </h2>
 
-            {detailProduct?.featured && (
-              <p className="text-xs text-[#9a6700] mt-1">
-                ★ Sản phẩm đang được ưu tiên
-              </p>
-            )}
+            <p className="mt-1 text-xs text-gray-400">
+              Thông tin sản phẩm được chia sẻ
+            </p>
           </div>
 
           <button
             type="button"
             onClick={onClose}
+            aria-label="Đóng"
             className="
-              w-9
-              h-9
-              rounded-xl
               flex
+              h-9
+              w-9
+              shrink-0
               items-center
               justify-center
+              rounded-xl
               text-gray-400
-              hover:text-gray-900
-              hover:bg-gray-100
               transition
+              hover:bg-gray-100
+              hover:text-gray-900
             "
           >
-            ✕
+            <X className="h-5 w-5" />
           </button>
         </header>
 
         {/* BODY */}
         <div className="overflow-y-auto">
-          {loadingDetail || !detailProduct ? (
-            <div className="py-20 text-center">
-              <div
-                className="
-                  w-8
-                  h-8
-                  border-[3px]
-                  border-gray-200
-                  border-t-[#ffba00]
-                  rounded-full
-                  animate-spin
-                  mx-auto
-                "
-              />
+          <div className="p-4 sm:p-6">
+            <div
+              className="
+                grid
+                grid-cols-1
+                gap-6
+                lg:grid-cols-[1.05fr_0.95fr]
+              "
+            >
+              {/* ================= IMAGE ================= */}
+              <div>
+                <div
+                  className="
+                    relative
+                    aspect-[4/3]
+                    overflow-hidden
+                    rounded-2xl
+                    bg-gray-100
+                  "
+                >
+                  {hasImages ? (
+                    <>
+                      <img
+                        src={images[currentImageIndex]}
+                        alt={`${product.title || "Sản phẩm"} - Ảnh ${
+                          currentImageIndex + 1
+                        }`}
+                        className="
+                          h-full
+                          w-full
+                          object-cover
+                        "
+                        onError={(event) => {
+                          event.currentTarget.style.display = "none";
+                        }}
+                      />
 
-              <p className="mt-4 text-sm text-gray-500">
-                Đang tải thông tin sản phẩm...
-              </p>
-            </div>
-          ) : (
-            <div className="p-5 sm:p-6">
-              {/* TOP */}
-              <div className="grid grid-cols-1 lg:grid-cols-[1.05fr_0.95fr] gap-6">
-                <div>
-                  {/* MAIN IMAGE */}
-                  <div className="relative aspect-[4/3] bg-gray-100 rounded-2xl overflow-hidden">
-                    {hasImages ? (
-                      <>
-                        <img
-                          src={images[currentImageIndex]}
-                          alt={`${detailProduct.title} - Ảnh ${
-                            currentImageIndex + 1
-                          }`}
-                          className="
-                            w-full
-                            h-full
-                            object-cover
-                            transition-opacity
-                            duration-200
-                          "
-                        />
-
-                        {/* PREVIOUS BUTTON */}
-                        {hasMultipleImages && (
+                      {hasMultipleImages && (
+                        <>
+                          {/* PREVIOUS */}
                           <button
                             type="button"
                             onClick={handlePreviousImage}
-                            disabled={currentImageIndex === 0}
                             aria-label="Ảnh trước"
                             className="
                               absolute
                               left-3
                               top-1/2
-                              -translate-y-1/2
-                              w-10
-                              h-10
-                              rounded-full
-                              bg-white/90
-                              shadow-md
                               flex
+                              h-10
+                              w-10
+                              -translate-y-1/2
                               items-center
                               justify-center
-                              text-2xl
+                              rounded-full
+                              bg-white/90
                               text-gray-700
+                              shadow-md
                               transition
-                              hover:bg-white
                               hover:scale-105
-                              disabled:opacity-30
-                              disabled:cursor-not-allowed
-                              disabled:hover:scale-100
+                              hover:bg-white
                             "
                           >
-                            ‹
+                            <ChevronLeft className="h-5 w-5" />
                           </button>
-                        )}
 
-                        {/* NEXT BUTTON */}
-                        {hasMultipleImages && (
+                          {/* NEXT */}
                           <button
                             type="button"
                             onClick={handleNextImage}
-                            disabled={currentImageIndex === images.length - 1}
                             aria-label="Ảnh tiếp theo"
                             className="
                               absolute
                               right-3
                               top-1/2
-                              -translate-y-1/2
-                              w-10
-                              h-10
-                              rounded-full
-                              bg-white/90
-                              shadow-md
                               flex
+                              h-10
+                              w-10
+                              -translate-y-1/2
                               items-center
                               justify-center
-                              text-2xl
+                              rounded-full
+                              bg-white/90
                               text-gray-700
+                              shadow-md
                               transition
-                              hover:bg-white
                               hover:scale-105
-                              disabled:opacity-30
-                              disabled:cursor-not-allowed
-                              disabled:hover:scale-100
+                              hover:bg-white
                             "
                           >
-                            ›
+                            <ChevronRight className="h-5 w-5" />
                           </button>
-                        )}
 
-                        {/* IMAGE COUNTER */}
-                        {hasMultipleImages && (
+                          {/* COUNTER */}
                           <div
                             className="
                               absolute
                               bottom-3
                               left-1/2
                               -translate-x-1/2
-                              px-3
-                              py-1
                               rounded-full
                               bg-black/60
-                              text-white
+                              px-3
+                              py-1
                               text-xs
                               font-medium
+                              text-white
                             "
                           >
                             {currentImageIndex + 1} / {images.length}
                           </div>
-                        )}
-                      </>
-                    ) : (
-                      <div className="w-full h-full flex flex-col items-center justify-center text-gray-400">
-                        <span className="text-4xl">📦</span>
+                        </>
+                      )}
+                    </>
+                  ) : (
+                    <div
+                      className="
+                        flex
+                        h-full
+                        flex-col
+                        items-center
+                        justify-center
+                        text-gray-400
+                      "
+                    >
+                      <span className="text-5xl">📦</span>
 
-                        <span className="text-sm mt-2">Chưa có hình ảnh</span>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* THUMBNAILS */}
-                  {hasMultipleImages && (
-                    <div className="mt-3">
-                      <div className="grid grid-cols-5 gap-2">
-                        {images.map((image, index) => (
-                          <button
-                            key={`${image}-${index}`}
-                            type="button"
-                            onClick={() => handleThumbnailClick(index)}
-                            className={`
-                              relative
-                              aspect-square
-                              overflow-hidden
-                              rounded-xl
-                              border-2
-                              transition
-                              ${
-                                currentImageIndex === index
-                                  ? "border-[#ffba00] ring-2 ring-[#ffba00]/20"
-                                  : "border-gray-200 hover:border-gray-300"
-                              }
-                            `}
-                          >
-                            <img
-                              src={image}
-                              alt={`Ảnh ${index + 1}`}
-                              className="
-                                w-full
-                                h-full
-                                object-cover
-                              "
-                            />
-
-                            {/* SELECTED OVERLAY */}
-                            {currentImageIndex === index && (
-                              <div className="absolute inset-0 bg-black/10" />
-                            )}
-                          </button>
-                        ))}
-                      </div>
+                      <span className="mt-2 text-sm">Chưa có hình ảnh</span>
                     </div>
                   )}
                 </div>
 
-                {/*SUMMARY*/}
-                <div>
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span
-                      className={`
-                        inline-flex
-                        px-2.5
-                        py-1.5
-                        rounded-lg
-                        border
-                        text-xs
-                        font-semibold
-                        ${getStatusClass(detailProduct.status)}
-                      `}
-                    >
-                      {getStatusLabel(detailProduct.status)}
-                    </span>
-
-                    {detailProduct.featured && (
-                      <span className="px-2.5 py-1.5 rounded-lg bg-[#fff3d1] text-[#9a6700] text-xs font-bold">
-                        ★ Ưu tiên
-                      </span>
-                    )}
-                  </div>
-
-                  <h1 className="text-2xl sm:text-3xl font-bold text-red-600 mt-4 leading-tight">
-                    {detailProduct.title}
-                  </h1>
-
-                  <div className="mt-6 space-y-4">
-                    <InfoRow
-                      label="Danh mục"
-                      value={detailProduct.category?.name || "Không xác định"}
-                    />
-
-                    <InfoRow
-                      label="Vị trí"
-                      value={
-                        detailProduct.address?.ward
-                          ? `${detailProduct.address.ward}, ${
-                              detailProduct.address?.province || ""
-                            }`
-                          : detailProduct.address?.province || "Không xác định"
-                      }
-                    />
-
-                    <InfoRow
-                      label="Ngày đăng"
-                      value={
-                        detailProduct.createdAt
-                          ? new Date(
-                              detailProduct.createdAt,
-                            ).toLocaleDateString("vi-VN")
-                          : "-"
-                      }
-                    />
-                  </div>
-
-                  {/* ADMIN ACTIONS */}
-                  <div className="mt-7 pt-6 border-t border-gray-100">
-                    <p className="text-sm font-bold text-gray-900 mb-3">
-                      Thao tác quản trị
-                    </p>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                {/* THUMBNAILS */}
+                {hasMultipleImages && (
+                  <div className="mt-3 grid grid-cols-5 gap-2">
+                    {images.map((image, index) => (
                       <button
+                        key={`${image}-${index}`}
                         type="button"
-                        onClick={handleToggleFeatured}
-                        disabled={updatingFeatured}
+                        onClick={() => handleThumbnailClick(index)}
                         className={`
-                          h-10
+                          relative
+                          aspect-square
+                          overflow-hidden
                           rounded-xl
-                          text-sm
-                          font-semibold
+                          border-2
                           transition
-                          disabled:opacity-50
                           ${
-                            detailProduct.featured
-                              ? "bg-[#ffba00] text-gray-900 hover:bg-[#eaaa00]"
-                              : "bg-[#fff8e6] text-[#8a5c00] hover:bg-[#fff0c7]"
+                            currentImageIndex === index
+                              ? "border-[#ffba00] ring-2 ring-[#ffba00]/20"
+                              : "border-gray-200 hover:border-gray-300"
                           }
                         `}
                       >
-                        {updatingFeatured
-                          ? "Đang cập nhật..."
-                          : detailProduct.featured
-                            ? "★ Bỏ ưu tiên"
-                            : "★ Đánh dấu ưu tiên"}
+                        <img
+                          src={image}
+                          alt={`Ảnh ${index + 1}`}
+                          className="h-full w-full object-cover"
+                        />
                       </button>
-
-                      {detailProduct.status !== "hidden" && (
-                        <button
-                          type="button"
-                          onClick={handleHideProduct}
-                          disabled={
-                            hiding || detailProduct.status === "processing"
-                          }
-                          className="
-                            h-10
-                            rounded-xl
-                            bg-gray-100
-                            text-gray-700
-                            hover:bg-red-50
-                            hover:text-red-600
-                            text-sm
-                            font-semibold
-                            transition
-                            disabled:opacity-50
-                            disabled:cursor-not-allowed
-                          "
-                        >
-                          {hiding ? "Đang ẩn..." : "Ẩn bài viết"}
-                        </button>
-                      )}
-                    </div>
-
-                    {detailProduct.status === "processing" && (
-                      <div className="mt-3 p-3 rounded-xl bg-amber-50 border border-amber-100">
-                        <p className="text-xs text-amber-700 leading-5">
-                          Sản phẩm đang có giao dịch phát sinh nên không thể ẩn
-                          trực tiếp.
-                        </p>
-                      </div>
-                    )}
+                    ))}
                   </div>
-                </div>
+                )}
               </div>
-              {/* DESCRIPTION */}
-              <section className="mt-6 p-5 rounded-2xl bg-gray-50 border border-gray-100">
-                <h3 className="font-bold text-gray-900">Mô tả sản phẩm</h3>
 
-                <p className="mt-3 text-sm text-gray-600 leading-7 whitespace-pre-wrap">
-                  {detailProduct.description ||
-                    "Không có mô tả cho sản phẩm này."}
-                </p>
-              </section>
-              {/* PRODUCT INFO */}
-              <section className="mt-6">
-                <h3 className="font-bold text-gray-900 mb-3">
-                  Thông tin sản phẩm
-                </h3>
+              {/* ================= INFO ================= */}
+              <div>
+                {/* CATEGORY */}
+                <div className="flex flex-wrap items-center gap-2">
+                  <span
+                    className="
+                      rounded-lg
+                      bg-yellow-50
+                      px-2.5
+                      py-1.5
+                      text-xs
+                      font-semibold
+                      text-[#9a6700]
+                    "
+                  >
+                    {categoryName || "Khác"}
+                  </span>
 
-                <div className="border border-gray-200 rounded-xl overflow-hidden bg-white">
-                  <table className="w-full text-sm">
-                    <tbody>
-                      <tr className="border-b border-gray-100">
-                        <td className="w-1/3 px-4 py-3 font-medium text-gray-500 bg-gray-50">
-                          Tên sản phẩm
-                        </td>
-                        <td className="px-4 py-3 text-gray-900 font-medium">
-                          {detailProduct.title || "Không xác định"}
-                        </td>
-                      </tr>
-
-                      <tr className="border-b border-gray-100">
-                        <td className="px-4 py-3 font-medium text-gray-500 bg-gray-50">
-                          Danh mục
-                        </td>
-                        <td className="px-4 py-3 text-gray-900">
-                          {detailProduct.category?.name || "Không xác định"}
-                        </td>
-                      </tr>
-
-                      <tr className="border-b border-gray-100">
-                        <td className="px-4 py-3 font-medium text-gray-500 bg-gray-50">
-                          Trạng thái
-                        </td>
-                        <td className="px-4 py-3 text-gray-900">
-                          {getStatusLabel(detailProduct.status)}
-                        </td>
-                      </tr>
-
-                      <tr className="border-b border-gray-100">
-                        <td className="px-4 py-3 font-medium text-gray-500 bg-gray-50">
-                          Tỉnh / Thành phố
-                        </td>
-                        <td className="px-4 py-3 text-gray-900">
-                          {detailProduct.address?.province || "Không xác định"}
-                        </td>
-                      </tr>
-
-                      <tr className="border-b border-gray-100">
-                        <td className="px-4 py-3 font-medium text-gray-500 bg-gray-50">
-                          Phường
-                        </td>
-                        <td className="px-4 py-3 text-gray-900">
-                          {detailProduct.address?.ward || "Không xác định"}
-                        </td>
-                      </tr>
-
-                      <tr>
-                        <td className="px-4 py-3 font-medium text-gray-500 bg-gray-50">
-                          Ưu tiên
-                        </td>
-                        <td className="px-4 py-3 text-gray-900">
-                          {detailProduct.featured
-                            ? "Đang được ưu tiên"
-                            : "Không"}
-                        </td>
-                      </tr>
-                    </tbody>
-                  </table>
+                  {product.featured && (
+                    <span
+                      className="
+                        rounded-lg
+                        bg-[#fff3d1]
+                        px-2.5
+                        py-1.5
+                        text-xs
+                        font-bold
+                        text-[#9a6700]
+                      "
+                    >
+                      ★ Nổi bật
+                    </span>
+                  )}
                 </div>
-              </section>
-              {/* GIVER INFO */}
-              <section className="mt-6 border-t border-gray-100 pt-6">
-                <h3 className="font-bold text-gray-900 mb-3">
-                  Thông tin người cho
-                </h3>
 
-                <div className="border border-gray-200 rounded-xl overflow-hidden bg-white">
-                  <table className="w-full text-sm">
-                    <tbody>
-                      <tr className="border-b border-gray-100">
-                        <td className="w-1/3 px-4 py-3 font-medium text-gray-500 bg-gray-50">
-                          Họ tên
-                        </td>
-                        <td className="px-4 py-3 text-gray-900 font-medium">
-                          {detailProduct.giver?.fullname ||
-                            detailProduct.giver?.name ||
-                            "Không có thông tin"}
-                        </td>
-                      </tr>
-
-                      <tr className="border-b border-gray-100">
-                        <td className="px-4 py-3 font-medium text-gray-500 bg-gray-50">
-                          Email
-                        </td>
-                        <td className="px-4 py-3 text-gray-900">
-                          {detailProduct.giver?.email || "Không có thông tin"}
-                        </td>
-                      </tr>
-
-                      <tr>
-                        <td className="px-4 py-3 font-medium text-gray-500 bg-gray-50">
-                          Số điện thoại
-                        </td>
-                        <td className="px-4 py-3 text-gray-900">
-                          {detailProduct.giver?.phone || "Không có thông tin"}
-                        </td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
-              </section>
-              {/* CLOSE */}
-              <div className="flex justify-end mt-6">
-                <button
-                  type="button"
-                  onClick={onClose}
+                {/* TITLE */}
+                <h1
                   className="
-                    h-10
-                    px-6
-                    rounded-xl
-                    bg-gray-900
-                    hover:bg-gray-800
-                    text-white
-                    text-sm
-                    font-semibold
+                    mt-4
+                    text-2xl
+                    font-bold
+                    leading-tight
+                    text-gray-900
+                    sm:text-3xl
                   "
                 >
-                  Đóng
+                  {product.title || "Không có tên sản phẩm"}
+                </h1>
+
+                {/* LOCATION */}
+                {(product.address?.ward || product.address?.province) && (
+                  <div className="mt-5 flex items-start gap-2">
+                    <MapPin
+                      className="
+                        mt-0.5
+                        h-5
+                        w-5
+                        shrink-0
+                        text-[#ffba00]
+                      "
+                    />
+
+                    <div>
+                      <p className="text-xs text-gray-400">Vị trí</p>
+
+                      <p className="mt-1 text-sm font-semibold text-gray-800">
+                        {product.address?.ward
+                          ? `${product.address.ward}${
+                              product.address?.province
+                                ? `, ${product.address.province}`
+                                : ""
+                            }`
+                          : product.address?.province}
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {/* DATE */}
+                {product.createdAt && (
+                  <div className="mt-4 flex items-start gap-2">
+                    <CalendarDays
+                      className="
+                        mt-0.5
+                        h-5
+                        w-5
+                        shrink-0
+                        text-gray-400
+                      "
+                    />
+
+                    <div>
+                      <p className="text-xs text-gray-400">Ngày đăng</p>
+
+                      <p className="mt-1 text-sm font-semibold text-gray-800">
+                        {new Date(product.createdAt).toLocaleDateString(
+                          "vi-VN",
+                        )}
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {/* SAVE */}
+                <button
+                  type="button"
+                  onClick={handleSave}
+                  className={`
+                    mt-7
+                    flex
+                    h-11
+                    w-full
+                    items-center
+                    justify-center
+                    gap-2
+                    rounded-xl
+                    text-sm
+                    font-semibold
+                    transition
+                    ${
+                      isSaved
+                        ? "bg-yellow-100 text-[#9a6700] hover:bg-yellow-200"
+                        : "bg-[#ffba00] text-gray-950 hover:bg-[#eaaa00]"
+                    }
+                  `}
+                >
+                  <svg
+                    className="h-5 w-5"
+                    fill={isSaved ? "currentColor" : "none"}
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    strokeWidth="1.8"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M6.5 4.5A2.5 2.5 0 019 2h6a2.5 2.5 0 012.5 2.5V21L12 18.2 6.5 21V4.5z"
+                    />
+                  </svg>
+
+                  {isSaved ? "Đã lưu sản phẩm" : "Lưu sản phẩm"}
                 </button>
               </div>
             </div>
-          )}
+
+            {/* ================= DESCRIPTION ================= */}
+            <section
+              className="
+                mt-6
+                rounded-2xl
+                border
+                border-gray-100
+                bg-gray-50
+                p-5
+              "
+            >
+              <h3 className="font-bold text-gray-900">Mô tả sản phẩm</h3>
+
+              <p
+                className="
+                  mt-3
+                  whitespace-pre-wrap
+                  text-sm
+                  leading-7
+                  text-gray-600
+                "
+              >
+                {product.description ||
+                  "Người đăng chưa cung cấp mô tả cho sản phẩm này."}
+              </p>
+            </section>
+
+            {/* ================= PRODUCT INFO ================= */}
+            <section className="mt-6">
+              <h3 className="mb-3 font-bold text-gray-900">
+                Thông tin sản phẩm
+              </h3>
+
+              <div className="overflow-hidden rounded-xl border border-gray-200 bg-white">
+                <table className="w-full text-sm">
+                  <tbody>
+                    <tr className="border-b border-gray-100">
+                      <td className="w-1/3 bg-gray-50 px-4 py-3 font-medium text-gray-500">
+                        Tên sản phẩm
+                      </td>
+
+                      <td className="px-4 py-3 font-medium text-gray-900">
+                        {product.title || "Không xác định"}
+                      </td>
+                    </tr>
+
+                    <tr className="border-b border-gray-100">
+                      <td className="bg-gray-50 px-4 py-3 font-medium text-gray-500">
+                        Danh mục
+                      </td>
+
+                      <td className="px-4 py-3 text-gray-900">
+                        {categoryName || "Không xác định"}
+                      </td>
+                    </tr>
+
+                    <tr className="border-b border-gray-100">
+                      <td className="bg-gray-50 px-4 py-3 font-medium text-gray-500">
+                        Trạng thái
+                      </td>
+
+                      <td className="px-4 py-3 text-gray-900">
+                        {product.status === "giving"
+                          ? "Đang cho"
+                          : product.status === "processing"
+                            ? "Đang xử lý"
+                            : product.status === "given"
+                              ? "Đã cho"
+                              : product.status === "hidden"
+                                ? "Đã ẩn"
+                                : "Không xác định"}
+                      </td>
+                    </tr>
+
+                    <tr className="border-b border-gray-100">
+                      <td className="bg-gray-50 px-4 py-3 font-medium text-gray-500">
+                        Tỉnh / Thành phố
+                      </td>
+
+                      <td className="px-4 py-3 text-gray-900">
+                        {product.address?.province || "Không xác định"}
+                      </td>
+                    </tr>
+
+                    <tr>
+                      <td className="bg-gray-50 px-4 py-3 font-medium text-gray-500">
+                        Phường
+                      </td>
+
+                      <td className="px-4 py-3 text-gray-900">
+                        {product.address?.ward || "Không xác định"}
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </section>
+
+            {/* ================= GIVER ================= */}
+            {(product.giver?.fullname || product.giver?.name) && (
+              <section className="mt-6">
+                <h3 className="mb-3 font-bold text-gray-900">Người cho</h3>
+
+                <div className="rounded-xl border border-gray-200 bg-white p-4">
+                  <p className="font-semibold text-gray-900">
+                    {product.giver?.fullname || product.giver?.name}
+                  </p>
+
+                  {product.giver?.email && (
+                    <p className="mt-1 text-sm text-gray-500">
+                      {product.giver.email}
+                    </p>
+                  )}
+                </div>
+              </section>
+            )}
+
+            {/* CLOSE */}
+            <div className="mt-6 flex justify-end">
+              <button
+                type="button"
+                onClick={onClose}
+                className="
+                  h-10
+                  rounded-xl
+                  bg-gray-900
+                  px-6
+                  text-sm
+                  font-semibold
+                  text-white
+                  transition
+                  hover:bg-gray-800
+                "
+              >
+                Đóng
+              </button>
+            </div>
+          </div>
         </div>
       </div>
     </div>
   );
 }
 
-function InfoRow({ label, value }) {
-  return (
-    <div>
-      <p className="text-xs text-gray-400">{label}</p>
-
-      <p className="text-sm font-semibold text-gray-800 mt-1">{value}</p>
-    </div>
-  );
-}
-
-function InfoCard({ label, value }) {
-  return (
-    <div className="p-4 rounded-xl bg-gray-50 border border-gray-100">
-      <p className="text-xs text-gray-400">{label}</p>
-
-      <p className="mt-1.5 text-sm font-semibold text-gray-800 break-words">
-        {value}
-      </p>
-    </div>
-  );
-}
-
-export default ProductDetailModal;
+export default UserProductDetailModal;

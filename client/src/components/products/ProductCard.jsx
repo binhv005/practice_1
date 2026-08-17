@@ -105,10 +105,7 @@ export default function ProductCard({
         <button
           type="button"
           aria-label={isSaved ? "Bỏ lưu" : "Lưu tin"}
-          onClick={(event) => {
-            event.stopPropagation();
-            onSave(productId);
-          }}
+          onClick={handleSaveClick}
           className={`
     absolute
     right-2
