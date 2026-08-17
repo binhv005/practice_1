@@ -1,10 +1,22 @@
 # Bỏ qua node_modules của cả client và server
 node_modules/
 client/node_modules/
+backend/node_modules/
 server/node_modules/
 
-# Bỏ qua file cấu hình nhạy cảm và build folder
+# Bỏ qua file cấu hình nhạy cảm
 .env
+backend/.env
 server/.env
+client/.env
+client/.env.production
+
+# Bỏ qua build folder
 client/dist/
-*.md
+
+# Bỏ qua file upload
+backend/uploads/
+uploads/
+
+# Bỏ qua file markdown (nếu không cần track)
+# *.md
