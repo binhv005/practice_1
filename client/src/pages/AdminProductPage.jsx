@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useToast } from "../contexts/ToastContext";
 
 import ProductFilter from "../components/products/ProductFilter";
 import ProductTable from "../components/products/ProductTable";
@@ -18,6 +19,8 @@ import {
 import { getCategories } from "../api/categoryApi";
 
 function AdminProductPage() {
+  const toast = useToast();
+  
   // PRODUCTS
 
   const [products, setProducts] = useState([]);
@@ -170,18 +173,18 @@ function AdminProductPage() {
     }
 
     if (files.length > 10) {
-      alert("Chỉ được chọn tối đa 10 ảnh");
+      toast.warning("Chỉ được chọn tối đa 10 ảnh");
       return;
     }
 
     for (const file of files) {
       if (!file.type.startsWith("image/")) {
-        alert(`File ${file.name} không phải là ảnh`);
+        toast.error(`File ${file.name} không phải là ảnh`);
         return;
       }
 
       if (file.size > 5 * 1024 * 1024) {
-        alert(`Ảnh ${file.name} vượt quá 5MB`);
+        toast.error(`Ảnh ${file.name} vượt quá 5MB`);
         return;
       }
     }
@@ -200,7 +203,7 @@ function AdminProductPage() {
 
   const handleUploadImages = async () => {
     if (selectedImages.length === 0) {
-      alert("Vui lòng chọn ít nhất một ảnh");
+      toast.warning("Vui lòng chọn ít nhất một ảnh");
       return;
     }
 
@@ -218,11 +221,11 @@ function AdminProductPage() {
         images: imageUrls,
       }));
 
-      alert(`Upload thành công ${imageUrls.length} ảnh`);
+      toast.success(`Upload thành công ${imageUrls.length} ảnh`);
     } catch (error) {
       console.error("Upload images error:", error);
 
-      alert(error.response?.data?.message || "Upload ảnh thất bại");
+      toast.error(error.response?.data?.message || "Upload ảnh thất bại");
     } finally {
       setUploading(false);
     }
@@ -267,27 +270,27 @@ function AdminProductPage() {
     e.preventDefault();
 
     if (!productForm.title.trim()) {
-      alert("Vui lòng nhập tên sản phẩm");
+      toast.warning("Vui lòng nhập tên sản phẩm");
       return;
     }
 
     if (!productForm.description.trim()) {
-      alert("Vui lòng nhập mô tả sản phẩm");
+      toast.warning("Vui lòng nhập mô tả sản phẩm");
       return;
     }
 
     if (productForm.images.length === 0) {
-      alert("Vui lòng upload ảnh sản phẩm");
+      toast.warning("Vui lòng upload ảnh sản phẩm");
       return;
     }
 
     if (!productForm.category) {
-      alert("Vui lòng chọn danh mục");
+      toast.warning("Vui lòng chọn danh mục");
       return;
     }
 
     if (!productForm.address.ward.trim()) {
-      alert("Vui lòng nhập phường");
+      toast.warning("Vui lòng nhập phường");
       return;
     }
 
@@ -300,7 +303,7 @@ function AdminProductPage() {
 
       console.log("Create product response:", response.data);
 
-      alert("Đăng tin thành công");
+      toast.success("Đăng tin thành công");
 
       resetForm();
       setShowCreateForm(false);
@@ -309,7 +312,7 @@ function AdminProductPage() {
     } catch (error) {
       console.error("Create product error:", error);
 
-      alert(error.response?.data?.message || "Không thể thêm sản phẩm");
+      toast.error(error.response?.data?.message || "Không thể thêm sản phẩm");
     } finally {
       setCreating(false);
     }
@@ -329,7 +332,7 @@ function AdminProductPage() {
     } catch (error) {
       console.error("Get product detail error:", error);
 
-      alert(
+      toast.error(
         error.response?.data?.message || "Không thể lấy thông tin sản phẩm",
       );
 
@@ -378,7 +381,7 @@ function AdminProductPage() {
         };
       });
 
-      alert(
+      toast.success(
         newFeatured
           ? "Đã đánh dấu sản phẩm nổi bật"
           : "Đã bỏ đánh dấu sản phẩm nổi bật",
@@ -386,7 +389,7 @@ function AdminProductPage() {
     } catch (error) {
       console.error("Update featured error:", error);
 
-      alert(
+      toast.error(
         error.response?.data?.message ||
           "Không thể cập nhật trạng thái nổi bật",
       );
@@ -403,7 +406,7 @@ function AdminProductPage() {
     }
 
     if (product.status === "processing") {
-      alert("Sản phẩm đang có giao dịch phát sinh, không thể ẩn trực tiếp");
+      toast.error("Sản phẩm đang có giao dịch phát sinh, không thể ẩn trực tiếp");
       return;
     }
 
@@ -447,11 +450,11 @@ function AdminProductPage() {
         };
       });
 
-      alert("Cập nhật thành công, thông báo đã được gửi cho chủ bài viết");
+      toast.success("Cập nhật thành công, thông báo đã được gửi cho chủ bài viết");
     } catch (error) {
       console.error("Hide product error:", error);
 
-      alert(error.response?.data?.message || "Không thể ẩn sản phẩm");
+      toast.error(error.response?.data?.message || "Không thể ẩn sản phẩm");
     } finally {
       setHidingId(null);
     }
@@ -836,3 +839,4 @@ function AdminProductPage() {
 }
 
 export default AdminProductPage;
+
