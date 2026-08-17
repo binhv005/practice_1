@@ -1,4 +1,6 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
+
 import UserHeader from "../components/user/UserHeader";
 import CategorySlider from "../components/user/CategorySlider";
 import RecommendedProducts from "../components/user/RecommendedProducts";
@@ -6,7 +8,10 @@ import UserFooter from "../components/user/UserFooter";
 import UserProductDetailModal from "../components/user/UserProductDetailModal";
 import CommunityStats from "../components/user/CommunityStats";
 import ProductCard from "../components/products/ProductCard";
+import HeroSection from "../components/user/HeroSection";
 import ProductCreateModal from "../components/products/ProductCreateModal";
+import { useSavedProducts } from "../hooks/useSavedProducts";
+
 import {
   LayoutGrid,
   Smartphone,
@@ -17,7 +22,9 @@ import {
   BookOpen,
   Pencil,
   MoreHorizontal,
+  MessageCircle,
 } from "lucide-react";
+
 import {
   getProducts,
   createProduct,
@@ -27,11 +34,21 @@ import {
 import { getCategories } from "../api/categoryApi";
 
 function HomePage() {
+  const navigate = useNavigate();
+
+  // =========================================================
+  // SAVED PRODUCTS HOOK
+  // =========================================================
+
+  const { toggleSave, isSaved } = useSavedProducts();
+
+  // =========================================================
+  // BASIC STATE
+  // =========================================================
+
   const [keyword, setKeyword] = useState("");
 
   const [selectedCategory, setSelectedCategory] = useState("Tất cả");
-
-  const [savedProducts, setSavedProducts] = useState(new Set());
 
   const [selectedProduct, setSelectedProduct] = useState(null);
 
@@ -41,20 +58,11 @@ function HomePage() {
 
   const [products, setProducts] = useState([]);
 
-  // Category dùng cho CategorySlider
-  const categories = [
-    { name: "Tất cả", icon: "▦" },
-    { name: "Điện thoại", icon: "📱" },
-    { name: "Laptop", icon: "💻" },
-    { name: "Đồ điện tử", icon: "🎧" },
-    { name: "Đồ gia dụng", icon: "🏠" },
-    { name: "Thời trang", icon: "👕" },
-    { name: "Sách", icon: "📚" },
-    { name: "Đồ dùng học tập", icon: "✏️" },
-    { name: "Khác", icon: "•••" },
-  ];
-
   const [productCategories, setProductCategories] = useState([]);
+
+  // =========================================================
+  // FILTERS
+  // =========================================================
 
   const [filters, setFilters] = useState({
     keyword: "",
@@ -62,6 +70,10 @@ function HomePage() {
     status: "giving",
     ward: "",
   });
+
+  // =========================================================
+  // CREATE PRODUCT FORM
+  // =========================================================
 
   const [productForm, setProductForm] = useState({
     title: "",
@@ -82,34 +94,103 @@ function HomePage() {
 
   const [creating, setCreating] = useState(false);
 
+  // =========================================================
+  // USER ADDRESS
+  // =========================================================
+
   const userAddress = {
     province: "TP. Hồ Chí Minh",
     ward: "Linh Chiểu",
   };
 
-  useEffect(() => {
-    loadProducts();
-  }, []);
+  // =========================================================
+  // CATEGORY CONFIG
+  // =========================================================
 
-  const loadProducts = async () => {
+  const categories = useMemo(
+    () => [
+      {
+        name: "Tất cả",
+        icon: LayoutGrid,
+      },
+      {
+        name: "Điện thoại",
+        icon: Smartphone,
+      },
+      {
+        name: "Laptop",
+        icon: Laptop,
+      },
+      {
+        name: "Đồ điện tử",
+        icon: Headphones,
+      },
+      {
+        name: "Đồ gia dụng",
+        icon: Home,
+      },
+      {
+        name: "Thời trang",
+        icon: Shirt,
+      },
+      {
+        name: "Sách",
+        icon: BookOpen,
+      },
+      {
+        name: "Đồ dùng học tập",
+        icon: Pencil,
+      },
+      {
+        name: "Khác",
+        icon: MoreHorizontal,
+      },
+    ],
+    [],
+  );
+
+  // =========================================================
+  // LOAD PRODUCTS
+  // =========================================================
+
+  const loadProducts = useCallback(async (customFilters = {}) => {
     try {
       setLoading(true);
 
-      const response = await getProducts({
+      const requestFilters = {
         status: "giving",
-      });
+        ...customFilters,
+      };
+
+      const response = await getProducts(requestFilters);
 
       const result = response?.data?.data || [];
 
       setProducts(result);
+
+      return result;
     } catch (error) {
       console.error("Load products error:", error);
 
       setProducts([]);
+
+      return [];
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  // =========================================================
+  // INITIAL LOAD
+  // =========================================================
+
+  useEffect(() => {
+    loadProducts();
+  }, [loadProducts]);
+
+  // =========================================================
+  // LOAD CATEGORIES
+  // =========================================================
 
   useEffect(() => {
     const loadCategories = async () => {
@@ -129,68 +210,109 @@ function HomePage() {
     loadCategories();
   }, []);
 
-  const filteredProducts = products.filter((product) => {
-    const categoryName =
-      typeof product.category === "object"
-        ? product.category?.name
-        : product.category;
+  // =========================================================
+  // FILTER PRODUCTS BY CATEGORY
+  // =========================================================
 
-    return selectedCategory === "Tất cả" || categoryName === selectedCategory;
-  });
+  const filteredProducts = useMemo(() => {
+    if (selectedCategory === "Tất cả") {
+      return products;
+    }
 
-  const handleSearch = async ({ keyword, ward }) => {
+    return products.filter((product) => {
+      const categoryName =
+        typeof product.category === "object"
+          ? product.category?.name
+          : product.category;
+
+      return categoryName === selectedCategory;
+    });
+  }, [products, selectedCategory]);
+
+  // =========================================================
+  // SEARCH
+  // =========================================================
+
+  const handleSearch = async ({ keyword: searchKeyword, ward }) => {
     try {
       setLoading(true);
 
-      const searchKeyword = keyword?.trim() || "";
+      const normalizedKeyword = searchKeyword?.trim() || "";
+
+      const normalizedWard = ward?.trim() || "";
 
       const searchFilters = {
-        keyword: searchKeyword,
         status: "giving",
+        keyword: normalizedKeyword,
       };
 
-      if (ward?.trim()) {
-        searchFilters.ward = ward.trim();
+      if (normalizedWard) {
+        searchFilters.ward = normalizedWard;
       }
 
-      const response = await getProducts(searchFilters);
-
-      const result = response?.data?.data || [];
+      const result = await loadProducts(searchFilters);
 
       setProducts(result);
 
+      setKeyword(normalizedKeyword);
+
       setFilters((prev) => ({
         ...prev,
-        keyword: searchKeyword,
-        ward: ward?.trim() || "",
+        keyword: normalizedKeyword,
+        ward: normalizedWard,
         status: "giving",
       }));
     } catch (error) {
       console.error("Search products error:", error);
 
       setProducts([]);
-    } finally {
-      setLoading(false);
     }
   };
+
+  // =========================================================
+  // CATEGORY CHANGE
+  // =========================================================
 
   const handleCategoryChange = (category) => {
     setSelectedCategory(category);
   };
 
-  const handleToggleSave = (productId) => {
-    setSavedProducts((prev) => {
-      const next = new Set(prev);
+  // =========================================================
+  // CLEAR CATEGORY
+  // =========================================================
 
-      if (next.has(productId)) {
-        next.delete(productId);
-      } else {
-        next.add(productId);
-      }
-
-      return next;
-    });
+  const handleClearCategory = () => {
+    setSelectedCategory("Tất cả");
   };
+
+  // =========================================================
+  // SAVE / UNSAVE PRODUCT
+  // =========================================================
+
+  const handleToggleSave = async (productId) => {
+    if (!productId) {
+      return;
+    }
+
+    // Kiểm tra đăng nhập
+    const savedUser = localStorage.getItem("user");
+    if (!savedUser) {
+      alert("Vui lòng đăng nhập để lưu sản phẩm");
+      navigate("/login");
+      return;
+    }
+
+    try {
+      await toggleSave(productId);
+    } catch (error) {
+      console.error("Toggle save error:", error);
+      alert(error?.response?.data?.message || "Không thể lưu sản phẩm");
+    }
+  };
+
+  // =========================================================
+  // PRODUCT DETAIL
+  // =========================================================
 
   const handleProductClick = (product) => {
     setSelectedProduct(product);
@@ -199,6 +321,18 @@ function HomePage() {
   const handleCloseDetail = () => {
     setSelectedProduct(null);
   };
+
+  // =========================================================
+  // GO TO MESSAGE PAGE
+  // =========================================================
+
+  const handleOpenMessages = () => {
+    navigate("/messages");
+  };
+
+  // =========================================================
+  // CREATE PRODUCT FORM
+  // =========================================================
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -221,6 +355,10 @@ function HomePage() {
     }));
   };
 
+  // =========================================================
+  // IMAGE SELECT
+  // =========================================================
+
   const handleImageChange = (e) => {
     const files = Array.from(e.target.files || []);
 
@@ -228,7 +366,6 @@ function HomePage() {
       return;
     }
 
-    // Tối đa 10 ảnh
     const limitedFiles = files.slice(0, 10);
 
     setSelectedImages(limitedFiles);
@@ -237,6 +374,10 @@ function HomePage() {
 
     setPreviewImages(previews);
   };
+
+  // =========================================================
+  // UPLOAD IMAGES
+  // =========================================================
 
   const handleUploadImages = async () => {
     if (selectedImages.length === 0) {
@@ -249,13 +390,7 @@ function HomePage() {
 
       const response = await uploadProductImages(selectedImages);
 
-      console.log("Upload response:", response);
-
-      // Backend trả về:
-      // response.data.data.imageUrls
       const uploadedImages = response?.data?.data?.imageUrls || [];
-
-      console.log("Uploaded image URLs:", uploadedImages);
 
       if (uploadedImages.length === 0) {
         alert("Upload ảnh thất bại: không nhận được URL ảnh");
@@ -276,6 +411,10 @@ function HomePage() {
       setUploading(false);
     }
   };
+
+  // =========================================================
+  // CREATE PRODUCT
+  // =========================================================
 
   const handleCreateProduct = async (e) => {
     e.preventDefault();
@@ -303,52 +442,67 @@ function HomePage() {
     try {
       setCreating(true);
 
+      const savedUser = localStorage.getItem("user");
+      let loggedInUserId = null;
+      if (savedUser) {
+        try {
+          const parsed = JSON.parse(savedUser);
+          loggedInUserId = parsed?._id || parsed?.id;
+        } catch (err) {
+          console.error("Parse user error:", err);
+        }
+      }
+
       const productData = {
         title: productForm.title.trim(),
-
         description: productForm.description.trim(),
-
         category: productForm.category,
-
-        // Đảm bảo luôn gửi array
         images: productForm.images,
-
+        giver: loggedInUserId || undefined,
         status: "giving",
-
         address: {
           province: productForm.address.province,
           ward: productForm.address.ward,
         },
       };
 
-      console.log("========== CREATE PRODUCT ==========");
-      console.log("Product data:", productData);
-      console.log("Images:", productData.images);
-      console.log("Images is array:", Array.isArray(productData.images));
-      console.log("Category:", productData.category);
-      console.log("Address:", productData.address);
-
       const response = await createProduct(productData);
 
-      console.log("Create product response:", response.data);
+      console.log("Create product response:", response?.data);
 
       alert("Đăng tin thành công!");
 
       handleCloseCreateForm();
 
-      await loadProducts();
+      // Reset về tất cả sau khi đăng
+      setSelectedCategory("Tất cả");
+
+      // Reload danh sách
+      await loadProducts({
+        status: "giving",
+
+        keyword: filters.keyword,
+
+        ...(filters.ward
+          ? {
+              ward: filters.ward,
+            }
+          : {}),
+      });
     } catch (error) {
       console.error("Create product error:", error);
 
       console.error("Backend response:", error?.response?.data);
-
-      console.error("Backend message:", error?.response?.data?.message);
 
       alert(error?.response?.data?.message || "Đăng tin thất bại!");
     } finally {
       setCreating(false);
     }
   };
+
+  // =========================================================
+  // CLOSE CREATE FORM
+  // =========================================================
 
   const handleCloseCreateForm = () => {
     if (creating || uploading) {
@@ -373,8 +527,16 @@ function HomePage() {
     setPreviewImages([]);
   };
 
+  // =========================================================
+  // RENDER
+  // =========================================================
+
   return (
-    <div className="min-h-screen bg-[#fafafa]">
+    <div className="min-h-screen bg-gradient-to-b from-[#fffdf7] via-[#fafafa] to-[#fffaf0]">
+      {/* =====================================================
+          HEADER
+      ===================================================== */}
+
       <UserHeader
         keyword={keyword}
         setKeyword={setKeyword}
@@ -389,123 +551,284 @@ function HomePage() {
         onCreatePost={() => setShowCreateForm(true)}
       />
 
+      {/* =====================================================
+          HERO
+      ===================================================== */}
+
+      <HeroSection />
+
+      {/* =====================================================
+          MAIN
+      ===================================================== */}
+
       <main className="mx-auto w-full max-w-[1440px] px-4 pb-20 sm:px-6 lg:px-8">
-        <section className="pt-10">
-          <div className="mb-6">
-            <h2 className="text-xl font-bold leading-7 text-gray-900">
-              Khám phá danh mục
-            </h2>
+        {/* ===================================================
+            QUICK ACTIONS
+        =================================================== */}
 
-            <p className="mt-2 text-sm leading-5 text-gray-500">
-              Tìm những món đồ phù hợp với nhu cầu của bạn
-            </p>
-          </div>
-
-          <CategorySlider
-            categories={categories}
-            selectedCategory={selectedCategory}
-            onCategoryChange={handleCategoryChange}
-          />
-        </section>
-
-        <section className="mt-14">
+        <section className="pt-6 sm:pt-8">
           <div
             className="
-              mb-7
               flex
               flex-col
               gap-3
+              rounded-2xl
+              border
+              border-yellow-100
+              bg-white
+              p-4
+              shadow-[0_4px_20px_rgba(0,0,0,0.03)]
               sm:flex-row
-              sm:items-end
+              sm:items-center
               sm:justify-between
+              sm:p-5
             "
           >
             <div>
-              <h2 className="text-xl font-bold leading-7 text-gray-900">
-                {selectedCategory === "Tất cả"
-                  ? "Tin đăng mới"
-                  : selectedCategory}
-              </h2>
+              <h2 className="font-bold text-gray-900">Cộng đồng cho tặng</h2>
 
-              <p className="mt-2 text-sm leading-5 text-gray-500">
-                {loading
-                  ? "Đang tải sản phẩm..."
-                  : `${filteredProducts.length} sản phẩm được tìm thấy`}
+              <p className="mt-1 text-sm text-gray-500">
+                Trao đi những món đồ bạn không còn sử dụng.
               </p>
             </div>
 
-            {selectedCategory !== "Tất cả" && (
-              <button
-                type="button"
-                onClick={() => setSelectedCategory("Tất cả")}
-                className="
-                  self-start
-                  rounded-lg
-                  px-3
-                  py-2
-                  text-sm
-                  font-medium
-                  text-gray-500
-                  transition
-                  hover:bg-gray-100
-                  hover:text-gray-900
-                  sm:self-auto
-                "
-              >
-                Xem tất cả
-              </button>
-            )}
-          </div>
-
-          {loading ? (
-            <LoadingState />
-          ) : filteredProducts.length > 0 ? (
-            <div
+            <button
+              type="button"
+              onClick={handleOpenMessages}
               className="
-                grid
-                grid-cols-2
-                gap-x-4
-                gap-y-6
-                sm:grid-cols-3
-                lg:grid-cols-4
-                xl:grid-cols-5
+                inline-flex
+                h-10
+                items-center
+                justify-center
+                gap-2
+                rounded-xl
+                border
+                border-gray-200
+                bg-white
+                px-4
+                text-sm
+                font-semibold
+                text-gray-700
+                transition
+                hover:border-yellow-300
+                hover:bg-yellow-50
+                hover:text-gray-900
               "
             >
-              {filteredProducts.map((product) => {
-                const productId = product._id || product.id;
-
-                return (
-                  <ProductCard
-                    key={productId}
-                    product={product}
-                    isSaved={savedProducts.has(productId)}
-                    onSave={handleToggleSave}
-                    onClick={() => handleProductClick(product)}
-                  />
-                );
-              })}
-            </div>
-          ) : (
-            <EmptyState />
-          )}
+              <MessageCircle size={18} />
+              Tin nhắn
+            </button>
+          </div>
         </section>
 
-        <RecommendedProducts products={products} userAddress={userAddress} />
+        {/* ===================================================
+            CATEGORY
+        =================================================== */}
+
+        <section className="pt-8 sm:pt-10">
+          <div
+            className="
+              rounded-2xl
+              border
+              border-yellow-100/80
+              bg-white
+              p-5
+              shadow-[0_4px_20px_rgba(0,0,0,0.03)]
+              sm:p-6
+            "
+          >
+            <div className="mb-6">
+              <div className="flex items-center gap-3">
+                <div className="h-8 w-1 rounded-full bg-[#ffba00]" />
+
+                <div>
+                  <h2 className="text-xl font-bold leading-7 text-gray-900">
+                    Khám phá danh mục
+                  </h2>
+
+                  <p className="mt-1 text-sm leading-5 text-gray-500">
+                    Tìm những món đồ phù hợp với nhu cầu của bạn
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <CategorySlider
+              categories={categories}
+              selectedCategory={selectedCategory}
+              onCategoryChange={handleCategoryChange}
+            />
+          </div>
+        </section>
+
+        {/* ===================================================
+            PRODUCTS
+        =================================================== */}
+
+        <section className="mt-8 sm:mt-10">
+          <div
+            className="
+              rounded-2xl
+              border
+              border-gray-100
+              bg-white
+              p-5
+              shadow-[0_4px_20px_rgba(0,0,0,0.03)]
+              sm:p-6
+            "
+          >
+            {/* Header */}
+
+            <div
+              className="
+                mb-7
+                flex
+                flex-col
+                gap-4
+                sm:flex-row
+                sm:items-end
+                sm:justify-between
+              "
+            >
+              <div className="flex items-center gap-3">
+                <div className="h-8 w-1 rounded-full bg-[#ffba00]" />
+
+                <div>
+                  <h2 className="text-xl font-bold leading-7 text-gray-900">
+                    {selectedCategory === "Tất cả"
+                      ? "Tin đăng mới"
+                      : selectedCategory}
+                  </h2>
+
+                  <p className="mt-1 text-sm leading-5 text-gray-500">
+                    {loading
+                      ? "Đang tải sản phẩm..."
+                      : `${filteredProducts.length} sản phẩm được tìm thấy`}
+                  </p>
+                </div>
+              </div>
+
+              {selectedCategory !== "Tất cả" && (
+                <button
+                  type="button"
+                  onClick={handleClearCategory}
+                  className="
+                    self-start
+                    rounded-lg
+                    border
+                    border-gray-200
+                    bg-white
+                    px-4
+                    py-2
+                    text-sm
+                    font-medium
+                    text-gray-600
+                    transition
+                    hover:border-yellow-300
+                    hover:bg-yellow-50
+                    hover:text-gray-900
+                    sm:self-auto
+                  "
+                >
+                  Xem tất cả
+                </button>
+              )}
+            </div>
+
+            {/* Product content */}
+
+            {loading ? (
+              <LoadingState />
+            ) : filteredProducts.length > 0 ? (
+              <div
+                className="
+                  grid
+                  grid-cols-2
+                  gap-x-4
+                  gap-y-6
+                  sm:grid-cols-3
+                  sm:gap-x-5
+                  lg:grid-cols-4
+                  xl:grid-cols-5
+                "
+              >
+                {filteredProducts.map((product) => {
+                  const productId = product._id || product.id;
+
+                  return (
+                    <ProductCard
+                      key={productId}
+                      product={product}
+                      isSaved={isSaved(productId)}
+                      onSave={handleToggleSave}
+                      onClick={() => handleProductClick(product)}
+                    />
+                  );
+                })}
+              </div>
+            ) : (
+              <EmptyState />
+            )}
+          </div>
+        </section>
+
+        {/* ===================================================
+            RECOMMENDED
+        =================================================== */}
+
+        <section
+          className="
+            mt-8
+            rounded-2xl
+            border
+            border-yellow-100
+            bg-white
+            p-5
+            shadow-[0_4px_20px_rgba(0,0,0,0.03)]
+            sm:mt-10
+            sm:p-6
+          "
+        >
+          <RecommendedProducts
+            products={products}
+            userAddress={userAddress}
+            onProductClick={handleProductClick}
+            isSaved={isSaved}
+            onSave={handleToggleSave}
+          />
+        </section>
+
+        {/* ===================================================
+            COMMUNITY STATS
+        =================================================== */}
+
         <CommunityStats />
       </main>
 
+      {/* =====================================================
+          FOOTER
+      ===================================================== */}
+
       <UserFooter />
+
+      {/* =====================================================
+          PRODUCT DETAIL
+      ===================================================== */}
 
       {selectedProduct && (
         <UserProductDetailModal
           product={selectedProduct}
           onClose={handleCloseDetail}
-          isSaved={savedProducts.has(selectedProduct._id || selectedProduct.id)}
+          isSaved={isSaved(selectedProduct._id || selectedProduct.id)}
           onSave={() =>
             handleToggleSave(selectedProduct._id || selectedProduct.id)
           }
         />
       )}
+
+      {/* =====================================================
+          CREATE PRODUCT
+      ===================================================== */}
 
       {showCreateForm && (
         <ProductCreateModal
@@ -526,6 +849,10 @@ function HomePage() {
     </div>
   );
 }
+
+// ===========================================================
+// LOADING STATE
+// ===========================================================
 
 function LoadingState() {
   return (
@@ -558,6 +885,10 @@ function LoadingState() {
     </div>
   );
 }
+
+// ===========================================================
+// EMPTY STATE
+// ===========================================================
 
 function EmptyState() {
   return (

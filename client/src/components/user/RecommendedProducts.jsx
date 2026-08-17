@@ -1,5 +1,12 @@
 import ProductCard from "../products/ProductCard";
-function RecommendedProducts({ products = [], userAddress }) {
+
+function RecommendedProducts({
+  products = [],
+  userAddress,
+  onProductClick,
+  isSaved = () => false,
+  onSave,
+}) {
   if (!userAddress?.province && !userAddress?.ward) {
     return null;
   }
@@ -18,7 +25,7 @@ function RecommendedProducts({ products = [], userAddress }) {
   });
 
   return (
-    <section className="mt-16">
+    <section>
       {/* HEADER */}
       <div
         className="
@@ -141,7 +148,6 @@ function RecommendedProducts({ products = [], userAddress }) {
           </div>
         </div>
       ) : (
-        /* PRODUCT GRID */
         <div
           className="
             grid
@@ -153,9 +159,19 @@ function RecommendedProducts({ products = [], userAddress }) {
             xl:grid-cols-5
           "
         >
-          {recommendedProducts.map((product) => (
-            <ProductCard key={product._id} product={product} />
-          ))}
+          {recommendedProducts.map((product) => {
+            const productId = product._id || product.id;
+
+            return (
+              <ProductCard
+                key={productId}
+                product={product}
+                isSaved={isSaved(productId)}
+                onSave={onSave}
+                onClick={() => onProductClick(product)}
+              />
+            );
+          })}
         </div>
       )}
     </section>
