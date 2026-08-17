@@ -1,8 +1,8 @@
 import axios from "axios";
 
 const BASE_URL =
-  import.meta.env.VITE_API_URL || "https://practice-1-h6t5.onrender.com";
-const CONVERSATION_API_URL = `${BASE_URL}/api/conversations`;
+  import.meta.env.VITE_API_URL || "https://practice-1-h6t5.onrender.com/api";
+const CONVERSATION_API_URL = `${BASE_URL}/conversations`;
 
 export const getConversations = () => {
   return axios.get(CONVERSATION_API_URL, {
