@@ -27,6 +27,7 @@ import {
 import { logoutApi, getMeApi } from "../../api/authApi";
 import { useUnreadMessages } from "../../contexts/UnreadMessagesContext";
 import { useToast } from "../../contexts/ToastContext";
+import { useModal } from "../../contexts/ModalContext";
 
 function UserHeader({
   keyword = "",
@@ -39,6 +40,7 @@ function UserHeader({
 }) {
   const navigate = useNavigate();
   const toast = useToast();
+  const modal = useModal();
   const [categoryOpen, setCategoryOpen] = useState(false);
   const [serviceOpen, setServiceOpen] = useState(false);
   const [userOpen, setUserOpen] = useState(false);
@@ -112,7 +114,13 @@ function UserHeader({
   const handleLogout = async () => {
     if (loggingOut) return;
 
-    const confirmed = window.confirm("Bạn có chắc chắn muốn đăng xuất?");
+    const confirmed = await modal.confirm({
+      title: "Xác nhận đăng xuất",
+      message: "Bạn có chắc chắn muốn đăng xuất khỏi hệ thống?",
+      confirmText: "Đăng xuất",
+      cancelText: "Hủy",
+      type: "danger",
+    });
 
     if (!confirmed) return;
 

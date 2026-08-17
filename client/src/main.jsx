@@ -5,6 +5,7 @@ import { GoogleOAuthProvider } from "@react-oauth/google";
 import { SocketProvider } from "./contexts/SocketContext";
 import { UnreadMessagesProvider } from "./contexts/UnreadMessagesContext";
 import { ToastProvider } from "./contexts/ToastContext";
+import { ModalProvider } from "./contexts/ModalContext";
 import App from "./App.jsx";
 import "./index.css";
 
@@ -16,15 +17,17 @@ const GOOGLE_CLIENT_ID =
 createRoot(document.getElementById("root")).render(
   <StrictMode>
     <ToastProvider>
-      <SocketProvider>
-        <UnreadMessagesProvider>
-          <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
-            <BrowserRouter>
-              <App />
-            </BrowserRouter>
-          </GoogleOAuthProvider>
-        </UnreadMessagesProvider>
-      </SocketProvider>
+      <ModalProvider>
+        <SocketProvider>
+          <UnreadMessagesProvider>
+            <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
+              <BrowserRouter>
+                <App />
+              </BrowserRouter>
+            </GoogleOAuthProvider>
+          </UnreadMessagesProvider>
+        </SocketProvider>
+      </ModalProvider>
     </ToastProvider>
   </StrictMode>,
 );
