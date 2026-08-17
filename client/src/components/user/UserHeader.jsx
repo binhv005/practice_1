@@ -906,7 +906,7 @@ function UserHeader({
                     </div>
 
                     <div className="mt-3 space-y-1">
-                      <button
+                 {/*    <button
                         type="button"
                         onClick={() => {
                           setUserOpen(false);
@@ -934,7 +934,7 @@ function UserHeader({
                         <span className="text-sm font-medium text-gray-700">
                           Tin của bạn
                         </span>
-                      </button>
+                      </button>*/}
 
                       <button
                         type="button"
