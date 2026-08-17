@@ -5,6 +5,12 @@ import AdminLayout from "./components/layout/AdminLayout";
 import AdminProductPage from "./pages/AdminProductPage";
 import UserProductPage from "./pages/UserProductPage";
 import HomePage from "./pages/HomePage";
+import LoginPage from "./pages/LoginPage";
+import RegisterPage from "./pages/RegisterPage";
+import ForgotPasswordPage from "./pages/ForgotPasswordPage";
+import ResetPasswordPage from "./pages/ResetPasswordPage";
+import MessagePage from "./pages/MessagePage";
+import SavedProductsPage from "./pages/SavedProductsPage";
 
 function DashboardPage() {
   return (
@@ -56,9 +62,13 @@ function App() {
 
       <Route path="/" element={<HomePage />} />
       <Route path="/my-products" element={<UserProductPage />} />
+      <Route path="/saved-products" element={<SavedProductsPage />} />
+      <Route path="/login" element={<LoginPage />} />
+      <Route path="/register" element={<RegisterPage />} />
+      <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+      <Route path="/reset-password" element={<ResetPasswordPage />} />
 
-      {/*FALLBACK */}
-
+      <Route path="/messages" element={<MessagePage />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
