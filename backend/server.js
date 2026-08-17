@@ -23,16 +23,32 @@ connectDB();
 const allowedOrigins = [
   "http://localhost:5173",
   "https://practice-1-nine.vercel.app",
+  "https://practice-1-osactetg2-binhv005s-projects.vercel.app",
 ];
 
-app.use(
-  cors({
-    origin: allowedOrigins,
-    credentials: true,
-    methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization"],
-  }),
-);
+// CORS configuration với wildcard cho Vercel domains
+const corsOptions = {
+  origin: function (origin, callback) {
+    // Cho phép requests không có origin (mobile apps, postman, etc.)
+    if (!origin) return callback(null, true);
+
+    // Cho phép localhost và Vercel domains
+    if (
+      origin.includes("localhost") ||
+      origin.includes("vercel.app") ||
+      allowedOrigins.includes(origin)
+    ) {
+      callback(null, true);
+    } else {
+      callback(new Error("Not allowed by CORS"));
+    }
+  },
+  credentials: true,
+  methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"],
+};
+
+app.use(cors(corsOptions));
 
 app.use(express.json());
 app.use(cookieParser());
