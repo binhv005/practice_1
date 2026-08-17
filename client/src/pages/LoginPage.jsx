@@ -5,9 +5,11 @@ import LoginForm from "../components/auth/LoginForm";
 import SocialLoginButtons from "../components/auth/SocialLoginButtons";
 import { loginApi, googleLoginApi } from "../api/authApi";
 import { loadCredentials, saveCredentials, clearCredentials } from "../utils/credentialsHelper";
+import { useToast } from "../contexts/ToastContext";
 
 function LoginPage() {
   const navigate = useNavigate();
+  const toast = useToast();
 
   const [form, setForm] = useState({
     identifier: "",
@@ -100,12 +102,17 @@ function LoginPage() {
           clearCredentials();
         }
 
-        // Redirect based on role
-        if (user.role === "admin" || user.role === "moderator") {
-          navigate("/admin/dashboard");
-        } else {
-          navigate("/");
-        }
+        // Hiển thị toast thành công
+        toast.success(`Chào mừng ${user.fullname}! Đăng nhập thành công.`);
+
+        // Redirect based on role sau 1 giây
+        setTimeout(() => {
+          if (user.role === "admin" || user.role === "moderator") {
+            navigate("/admin/dashboard");
+          } else {
+            navigate("/");
+          }
+        }, 1000);
       }
     } catch (error) {
       console.error("Login error:", error);
@@ -147,12 +154,17 @@ function LoginPage() {
         const saved = JSON.parse(localStorage.getItem("user"));
         console.log("💾 Saved to localStorage:", saved);
 
-        // Redirect based on role
-        if (user.role === "admin" || user.role === "moderator") {
-          navigate("/admin/dashboard");
-        } else {
-          navigate("/");
-        }
+        // Hiển thị toast thành công
+        toast.success(`Chào mừng ${user.fullname}! Đăng nhập Google thành công.`);
+
+        // Redirect based on role sau 1 giây
+        setTimeout(() => {
+          if (user.role === "admin" || user.role === "moderator") {
+            navigate("/admin/dashboard");
+          } else {
+            navigate("/");
+          }
+        }, 1000);
       }
     } catch (error) {
       console.error("❌ Google login error:", error);

@@ -26,6 +26,7 @@ import {
 } from "lucide-react";
 import { logoutApi, getMeApi } from "../../api/authApi";
 import { useUnreadMessages } from "../../contexts/UnreadMessagesContext";
+import { useToast } from "../../contexts/ToastContext";
 
 function UserHeader({
   keyword = "",
@@ -37,6 +38,7 @@ function UserHeader({
   onCategoryChange = () => {},
 }) {
   const navigate = useNavigate();
+  const toast = useToast();
   const [categoryOpen, setCategoryOpen] = useState(false);
   const [serviceOpen, setServiceOpen] = useState(false);
   const [userOpen, setUserOpen] = useState(false);
@@ -134,10 +136,10 @@ function UserHeader({
       navigate("/");
 
       // Thông báo thành công
-      alert("Đăng xuất thành công!");
+      toast.success("Đăng xuất thành công!");
     } catch (error) {
       console.error("Logout error:", error);
-      alert("Đăng xuất thất bại. Vui lòng thử lại!");
+      toast.error("Đăng xuất thất bại. Vui lòng thử lại!");
     } finally {
       setLoggingOut(false);
     }

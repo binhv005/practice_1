@@ -4,9 +4,11 @@ import { useNavigate } from "react-router-dom";
 
 import RegisterForm from "../components/auth/RegisterForm";
 import { registerApi } from "../api/authApi";
+import { useToast } from "../contexts/ToastContext";
 
 function RegisterPage() {
   const navigate = useNavigate();
+  const toast = useToast();
 
   const [form, setForm] = useState({
     fullName: "",
@@ -111,16 +113,14 @@ function RegisterPage() {
           agreeTerms: false,
         });
 
-        // Thông báo thành công
+        // Thông báo thành công bằng Toast
         const successMessage = `Chào mừng ${response.data.user.fullname}! Tài khoản của bạn đã được tạo thành công.`;
+        toast.success(successMessage);
         
-        // Tạm thời dùng alert, sau có thể thay bằng toast/modal
-        alert(successMessage);
-        
-        // Redirect về login sau 1 giây
+        // Redirect về login sau 1.5 giây
         setTimeout(() => {
           navigate("/login");
-        }, 500);
+        }, 1500);
       }
     } catch (error) {
       console.error("Register error:", error);
