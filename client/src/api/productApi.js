@@ -1,13 +1,18 @@
 import axios from "axios";
 
-const API_URL = "http://localhost:3000/api";
+const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3000/api";
+
+const api = axios.create({
+  baseURL: API_URL,
+  withCredentials: true,
+});
 
 // ======================================================
 // GET PRODUCTS
 // ======================================================
 
 export const getProducts = (filters = {}) => {
-  return axios.get(`${API_URL}/products`, {
+  return api.get("/products", {
     params: {
       keyword: filters.keyword || undefined,
       category: filters.category || undefined,
@@ -22,7 +27,7 @@ export const getProducts = (filters = {}) => {
 // ======================================================
 
 export const getProductById = (id) => {
-  return axios.get(`${API_URL}/products/${id}`);
+  return api.get(`/products/${id}`);
 };
 
 // ======================================================
@@ -30,7 +35,7 @@ export const getProductById = (id) => {
 // ======================================================
 
 export const createProduct = (productData) => {
-  return axios.post(`${API_URL}/products`, productData);
+  return api.post("/products", productData);
 };
 
 // ======================================================
@@ -38,7 +43,7 @@ export const createProduct = (productData) => {
 // ======================================================
 
 export const updateProduct = (id, data) => {
-  return axios.put(`${API_URL}/products/${id}`, data);
+  return api.put(`/products/${id}`, data);
 };
 
 // ======================================================
@@ -46,7 +51,7 @@ export const updateProduct = (id, data) => {
 // ======================================================
 
 export const hideProduct = (id) => {
-  return axios.put(`${API_URL}/products/${id}`, {
+  return api.put(`/products/${id}`, {
     status: "hidden",
   });
 };
@@ -62,7 +67,7 @@ export const uploadProductImages = (files) => {
     formData.append("images", file);
   });
 
-  return axios.post(`${API_URL}/products/upload-images`, formData, {
+  return api.post("/products/upload-images", formData, {
     headers: {
       "Content-Type": "multipart/form-data",
     },
@@ -78,9 +83,11 @@ export const uploadProductImage = (file) => {
 
   formData.append("image", file);
 
-  return axios.post(`${API_URL}/products/upload-image`, formData, {
+  return api.post("/products/upload-image", formData, {
     headers: {
       "Content-Type": "multipart/form-data",
     },
   });
 };
+
+export default api;

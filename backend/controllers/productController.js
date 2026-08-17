@@ -1,4 +1,5 @@
 const mongoose = require("mongoose");
+const jwt = require("jsonwebtoken");
 
 const Product = require("../models/Product");
 const Category = require("../models/Category");
@@ -296,12 +297,31 @@ const createProduct = async (req, res) => {
     // GIVER
     // =========================
 
-    const giverId = process.env.ADMIN_ID;
+    let giverId = req.user?._id || req.body.giver;
+
+    if (!giverId && req.cookies?.accessToken) {
+      try {
+        const decoded = jwt.verify(
+          req.cookies.accessToken,
+          process.env.JWT_SECRET,
+        );
+
+        if (decoded?.userId) {
+          giverId = decoded.userId;
+        }
+      } catch {
+        // ignore jwt error
+      }
+    }
+
+    if (!giverId) {
+      giverId = process.env.ADMIN_ID;
+    }
 
     if (!giverId || !mongoose.Types.ObjectId.isValid(giverId)) {
-      return res.status(500).json({
+      return res.status(400).json({
         success: false,
-        message: "ADMIN_ID chưa được cấu hình hoặc không hợp lệ",
+        message: "Không xác định được người đăng sản phẩm",
       });
     }
 
