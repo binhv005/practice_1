@@ -14,6 +14,10 @@ function ProductCreateModal({
   handleCreateProduct,
   handleCloseCreateForm,
 }) {
+  // Debug: Check categories
+  console.log("ProductCreateModal categories:", categories);
+  console.log("Categories length:", categories?.length);
+
   return (
     <div
       className="
@@ -140,24 +144,39 @@ function ProductCreateModal({
                       bg-white
                       text-sm
                       outline-none
+                      appearance-none
+                      cursor-pointer
                       focus:border-[#ffba00]
                       focus:ring-4
                       focus:ring-[#ffba00]/10
                     "
+                    style={{
+                      backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e")`,
+                      backgroundPosition: 'right 0.5rem center',
+                      backgroundRepeat: 'no-repeat',
+                      backgroundSize: '1.5em 1.5em',
+                      paddingRight: '2.5rem',
+                    }}
                   >
                     <option value="">Chọn danh mục</option>
 
-                    {categories.map((category) => (
-                      <option key={category._id} value={category._id}>
-                        {category.name}
+                    {categories && categories.length > 0 ? (
+                      categories.map((category) => (
+                        <option key={category._id} value={category._id}>
+                          {category.name}
+                        </option>
+                      ))
+                    ) : (
+                      <option value="" disabled>
+                        Đang tải danh mục...
                       </option>
-                    ))}
+                    )}
                   </select>
                 </div>
 
                 {/* DISTRICT */}
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  <label className="block text-sm font-semibold text-gray-700 mb-1.5">
                     Phường
                   </label>
 
@@ -166,20 +185,29 @@ function ProductCreateModal({
                     value={productForm.address.ward}
                     onChange={handleAddressChange}
                     className="
-      w-full
-      h-11
-      px-3
-      rounded-xl
-      border
-      border-gray-200
-      bg-white
-      text-sm
-      text-gray-700
-      outline-none
-      focus:border-[#ffba00]
-      focus:ring-2
-      focus:ring-[#fff3d1]
-    "
+                      w-full
+                      h-11
+                      px-3.5
+                      rounded-xl
+                      border
+                      border-gray-200
+                      bg-white
+                      text-sm
+                      text-gray-700
+                      outline-none
+                      appearance-none
+                      cursor-pointer
+                      focus:border-[#ffba00]
+                      focus:ring-4
+                      focus:ring-[#ffba00]/10
+                    "
+                    style={{
+                      backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e")`,
+                      backgroundPosition: 'right 0.5rem center',
+                      backgroundRepeat: 'no-repeat',
+                      backgroundSize: '1.5em 1.5em',
+                      paddingRight: '2.5rem',
+                    }}
                   >
                     <option value="">Chọn phường</option>
 
