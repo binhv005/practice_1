@@ -1,6 +1,7 @@
 import { io } from "socket.io-client";
 
-const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || "http://localhost:3000";
+const SOCKET_URL =
+  import.meta.env.VITE_SOCKET_URL || "https://practice-1-h6t5.onrender.com";
 
 export const socket = io(SOCKET_URL, {
   autoConnect: false,

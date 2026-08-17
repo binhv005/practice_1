@@ -1,6 +1,8 @@
 import axios from "axios";
 
-const CONVERSATION_API_URL = "/api/conversations";
+const BASE_URL =
+  import.meta.env.VITE_API_URL || "https://practice-1-h6t5.onrender.com";
+const CONVERSATION_API_URL = `${BASE_URL}/api/conversations`;
 
 export const getConversations = () => {
   return axios.get(CONVERSATION_API_URL, {
@@ -17,13 +19,9 @@ export const createConversation = (userIdOrData, maybeProductId) => {
           ...(maybeProductId ? { productId: maybeProductId } : {}),
         };
 
-  return axios.post(
-    CONVERSATION_API_URL,
-    payload,
-    {
-      withCredentials: true,
-    },
-  );
+  return axios.post(CONVERSATION_API_URL, payload, {
+    withCredentials: true,
+  });
 };
 
 export const getConversation = (conversationId) => {
