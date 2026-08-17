@@ -22,30 +22,24 @@ function GiftBox3D() {
 
       const container = containerRef.current;
 
-      /* =====================================================
-         SIZE
-      ===================================================== */
-
       const getSize = () => ({
         width: container.clientWidth,
         height: container.clientHeight,
       });
 
-      let { width, height } = getSize();
-
-      /* =====================================================
-         SCENE
-      ===================================================== */
+      const { width, height } = getSize();
 
       const scene = new THREE.Scene();
 
-      const camera = new THREE.PerspectiveCamera(42, width / height, 0.1, 1000);
+      const camera = new THREE.PerspectiveCamera(
+        40,
+        width / height,
+        0.1,
+        1000
+      );
 
-      // Góc nhìn từ trên xuống nhiều hơn
-      camera.position.set(0, 2.2, 7.5);
-
-      // Nhìn vào trung tâm hộp
-      camera.lookAt(0, 0, 0);
+      camera.position.set(0, 2.2, 7.8);
+      camera.lookAt(0, 0.15, 0);
 
       const renderer = new THREE.WebGLRenderer({
         antialias: true,
@@ -53,14 +47,11 @@ function GiftBox3D() {
       });
 
       renderer.setSize(width, height);
-
       renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
-
       renderer.setClearColor(0x000000, 0);
 
       renderer.shadowMap.enabled = true;
       renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-
       renderer.outputColorSpace = THREE.SRGBColorSpace;
 
       container.appendChild(renderer.domElement);
@@ -69,77 +60,469 @@ function GiftBox3D() {
       renderer.domElement.style.height = "100%";
       renderer.domElement.style.display = "block";
 
+      /* =====================================================
+         MATERIALS
+      ===================================================== */
+
       const yellowMaterial = new THREE.MeshStandardMaterial({
-        color: 0xffd166,
-        roughness: 0.65,
-        metalness: 0.02,
+        color: 0xffd86b,
+        roughness: 0.82,
+        metalness: 0,
       });
 
-      const whiteMaterial = new THREE.MeshStandardMaterial({
-        color: 0xffffff,
-        roughness: 0.72,
-        metalness: 0.01,
+      const yellowEdgeMaterial = new THREE.MeshStandardMaterial({
+        color: 0xf1bd50,
+        roughness: 0.86,
+        metalness: 0,
+      });
+
+      const ribbonMaterial = new THREE.MeshStandardMaterial({
+        color: 0xfff8ed,
+        roughness: 0.5,
+        metalness: 0,
+      });
+
+      const innerMaterial = new THREE.MeshStandardMaterial({
+        color: 0xf7dfa0,
+        roughness: 0.92,
+        metalness: 0,
+        side: THREE.DoubleSide,
+      });
+
+      const darkInnerMaterial = new THREE.MeshStandardMaterial({
+        color: 0xd9b86a,
+        roughness: 1,
+        metalness: 0,
+        side: THREE.DoubleSide,
       });
 
       const giftBox = new THREE.Group();
-
       giftBox.position.set(0, -0.15, 0);
-
-      /*
-       * Thu nhỏ toàn bộ hộp để đảm bảo
-       * không bị cắt khỏi vòng tròn.
-       */
-      giftBox.scale.setScalar(0.82);
+      giftBox.scale.setScalar(0.78);
 
       scene.add(giftBox);
+
+      /* =====================================================
+         DIMENSIONS
+      ===================================================== */
+
+      const boxSize = 2.4;
+      const boxThickness = 0.16;
+      const innerOffset = 0.018;
+
+      const boxBaseGroup = new THREE.Group();
+      giftBox.add(boxBaseGroup);
 
       /* =====================================================
          BOX BASE
       ===================================================== */
 
-      const baseGeometry = new THREE.BoxGeometry(2.4, 2.4, 2.4);
+      const bottomGeometry = new THREE.BoxGeometry(
+        boxSize,
+        boxThickness,
+        boxSize
+      );
 
-      const boxBase = new THREE.Mesh(baseGeometry, yellowMaterial);
+      const bottom = new THREE.Mesh(
+        bottomGeometry,
+        yellowMaterial
+      );
 
-      boxBase.castShadow = true;
-      boxBase.receiveShadow = true;
+      bottom.position.y =
+        -boxSize / 2 + boxThickness / 2;
 
-      giftBox.add(boxBase);
+      bottom.castShadow = true;
+      bottom.receiveShadow = true;
+
+      boxBaseGroup.add(bottom);
+
+      /* ===== Inner floor ===== */
+
+      const bottomInnerGeometry = new THREE.PlaneGeometry(
+        boxSize - boxThickness * 2.2,
+        boxSize - boxThickness * 2.2
+      );
+
+      const bottomInner = new THREE.Mesh(
+        bottomInnerGeometry,
+        innerMaterial
+      );
+
+      bottomInner.rotation.x = Math.PI / 2;
+
+      bottomInner.position.y =
+        -boxSize / 2 + boxThickness + innerOffset;
+
+      bottomInner.receiveShadow = true;
+
+      boxBaseGroup.add(bottomInner);
 
       /* =====================================================
-         RIBBON FRONT / BACK
+         LEFT WALL
       ===================================================== */
 
-      const ribbonWidth = 0.42;
+      const leftGeometry = new THREE.BoxGeometry(
+        boxThickness,
+        boxSize - boxThickness,
+        boxSize
+      );
 
-      const ribbonZGeometry = new THREE.BoxGeometry(2.45, 2.45, ribbonWidth);
+      const left = new THREE.Mesh(
+        leftGeometry,
+        yellowMaterial
+      );
 
-      const ribbonZ = new THREE.Mesh(ribbonZGeometry, whiteMaterial);
+      left.position.set(
+        -boxSize / 2 + boxThickness / 2,
+        boxThickness / 2,
+        0
+      );
 
-      ribbonZ.castShadow = true;
+      left.castShadow = true;
+      left.receiveShadow = true;
 
-      giftBox.add(ribbonZ);
+      boxBaseGroup.add(left);
+
+      const leftInnerGeometry = new THREE.PlaneGeometry(
+        boxSize - boxThickness * 2,
+        boxSize - boxThickness
+      );
+
+      const leftInner = new THREE.Mesh(
+        leftInnerGeometry,
+        innerMaterial
+      );
+
+      leftInner.rotation.y = -Math.PI / 2;
+
+      leftInner.position.set(
+        -boxSize / 2 + boxThickness + innerOffset,
+        boxThickness / 2,
+        0
+      );
+
+      leftInner.receiveShadow = true;
+
+      boxBaseGroup.add(leftInner);
 
       /* =====================================================
-         RIBBON LEFT / RIGHT
+         RIGHT WALL
       ===================================================== */
 
-      const ribbonXGeometry = new THREE.BoxGeometry(ribbonWidth, 2.45, 2.45);
+      const rightGeometry = new THREE.BoxGeometry(
+        boxThickness,
+        boxSize - boxThickness,
+        boxSize
+      );
 
-      const ribbonX = new THREE.Mesh(ribbonXGeometry, whiteMaterial);
+      const right = new THREE.Mesh(
+        rightGeometry,
+        yellowMaterial
+      );
 
-      ribbonX.castShadow = true;
+      right.position.set(
+        boxSize / 2 - boxThickness / 2,
+        boxThickness / 2,
+        0
+      );
 
-      giftBox.add(ribbonX);
+      right.castShadow = true;
+      right.receiveShadow = true;
+
+      boxBaseGroup.add(right);
+
+      const rightInnerGeometry = new THREE.PlaneGeometry(
+        boxSize - boxThickness * 2,
+        boxSize - boxThickness
+      );
+
+      const rightInner = new THREE.Mesh(
+        rightInnerGeometry,
+        innerMaterial
+      );
+
+      rightInner.rotation.y = Math.PI / 2;
+
+      rightInner.position.set(
+        boxSize / 2 - boxThickness - innerOffset,
+        boxThickness / 2,
+        0
+      );
+
+      rightInner.receiveShadow = true;
+
+      boxBaseGroup.add(rightInner);
 
       /* =====================================================
-         LID GROUP
-         
-         Group này được đặt chính giữa hộp.
-         
-         Khi mở:
-         - nâng lên
-         - nghiêng nhẹ
+         FRONT WALL
+      ===================================================== */
+
+      const frontGeometry = new THREE.BoxGeometry(
+        boxSize - 2 * boxThickness,
+        boxSize - boxThickness,
+        boxThickness
+      );
+
+      const front = new THREE.Mesh(
+        frontGeometry,
+        yellowMaterial
+      );
+
+      front.position.set(
+        0,
+        boxThickness / 2,
+        boxSize / 2 - boxThickness / 2
+      );
+
+      front.castShadow = true;
+      front.receiveShadow = true;
+
+      boxBaseGroup.add(front);
+
+      const frontInnerGeometry = new THREE.PlaneGeometry(
+        boxSize - 2 * boxThickness,
+        boxSize - boxThickness
+      );
+
+      const frontInner = new THREE.Mesh(
+        frontInnerGeometry,
+        innerMaterial
+      );
+
+      frontInner.position.set(
+        0,
+        boxThickness / 2,
+        boxSize / 2 - boxThickness - innerOffset
+      );
+
+      frontInner.receiveShadow = true;
+
+      boxBaseGroup.add(frontInner);
+
+      /* =====================================================
+         BACK WALL
+      ===================================================== */
+
+      const backGeometry = new THREE.BoxGeometry(
+        boxSize - 2 * boxThickness,
+        boxSize - boxThickness,
+        boxThickness
+      );
+
+      const back = new THREE.Mesh(
+        backGeometry,
+        yellowMaterial
+      );
+
+      back.position.set(
+        0,
+        boxThickness / 2,
+        -boxSize / 2 + boxThickness / 2
+      );
+
+      back.castShadow = true;
+      back.receiveShadow = true;
+
+      boxBaseGroup.add(back);
+
+      const backInnerGeometry = new THREE.PlaneGeometry(
+        boxSize - 2 * boxThickness,
+        boxSize - boxThickness
+      );
+
+      const backInner = new THREE.Mesh(
+        backInnerGeometry,
+        innerMaterial
+      );
+
+      backInner.rotation.y = Math.PI;
+
+      backInner.position.set(
+        0,
+        boxThickness / 2,
+        -boxSize / 2 + boxThickness + innerOffset
+      );
+
+      backInner.receiveShadow = true;
+
+      boxBaseGroup.add(backInner);
+
+      /* =====================================================
+         TOP RIM
+      ===================================================== */
+
+      const rimThickness = 0.075;
+      const rimHeight = 0.09;
+
+      const rimFrontGeometry = new THREE.BoxGeometry(
+        boxSize - 2 * boxThickness,
+        rimHeight,
+        rimThickness
+      );
+
+      const rimFront = new THREE.Mesh(
+        rimFrontGeometry,
+        yellowEdgeMaterial
+      );
+
+      rimFront.position.set(
+        0,
+        boxSize / 2 - rimHeight / 2,
+        boxSize / 2 - boxThickness - rimThickness / 2
+      );
+
+      rimFront.castShadow = true;
+      boxBaseGroup.add(rimFront);
+
+      const rimBackGeometry = new THREE.BoxGeometry(
+        boxSize - 2 * boxThickness,
+        rimHeight,
+        rimThickness
+      );
+
+      const rimBack = new THREE.Mesh(
+        rimBackGeometry,
+        yellowEdgeMaterial
+      );
+
+      rimBack.position.set(
+        0,
+        boxSize / 2 - rimHeight / 2,
+        -boxSize / 2 + boxThickness + rimThickness / 2
+      );
+
+      rimBack.castShadow = true;
+      boxBaseGroup.add(rimBack);
+
+      const rimLeftGeometry = new THREE.BoxGeometry(
+        rimThickness,
+        rimHeight,
+        boxSize - 2 * boxThickness
+      );
+
+      const rimLeft = new THREE.Mesh(
+        rimLeftGeometry,
+        yellowEdgeMaterial
+      );
+
+      rimLeft.position.set(
+        -boxSize / 2 + boxThickness + rimThickness / 2,
+        boxSize / 2 - rimHeight / 2,
+        0
+      );
+
+      rimLeft.castShadow = true;
+      boxBaseGroup.add(rimLeft);
+
+      const rimRightGeometry = new THREE.BoxGeometry(
+        rimThickness,
+        rimHeight,
+        boxSize - 2 * boxThickness
+      );
+
+      const rimRight = new THREE.Mesh(
+        rimRightGeometry,
+        yellowEdgeMaterial
+      );
+
+      rimRight.position.set(
+        boxSize / 2 - boxThickness - rimThickness / 2,
+        boxSize / 2 - rimHeight / 2,
+        0
+      );
+
+      rimRight.castShadow = true;
+      boxBaseGroup.add(rimRight);
+
+      /* =====================================================
+         OUTER RIBBON
+         Ribbon chỉ nằm ngoài thành hộp.
+      ===================================================== */
+
+      const ribbonWidth = 0.36;
+
+      const ribbonFrontGeometry = new THREE.BoxGeometry(
+        ribbonWidth,
+        boxSize - boxThickness,
+        boxThickness + 0.025
+      );
+
+      const ribbonFront = new THREE.Mesh(
+        ribbonFrontGeometry,
+        ribbonMaterial
+      );
+
+      ribbonFront.position.set(
+        0,
+        boxThickness / 2,
+        boxSize / 2 + 0.015
+      );
+
+      ribbonFront.castShadow = true;
+      giftBox.add(ribbonFront);
+
+      const ribbonBackGeometry = new THREE.BoxGeometry(
+        ribbonWidth,
+        boxSize - boxThickness,
+        boxThickness + 0.025
+      );
+
+      const ribbonBack = new THREE.Mesh(
+        ribbonBackGeometry,
+        ribbonMaterial
+      );
+
+      ribbonBack.position.set(
+        0,
+        boxThickness / 2,
+        -boxSize / 2 - 0.015
+      );
+
+      ribbonBack.castShadow = true;
+      giftBox.add(ribbonBack);
+
+      const ribbonLeftGeometry = new THREE.BoxGeometry(
+        boxThickness + 0.025,
+        boxSize - boxThickness,
+        ribbonWidth
+      );
+
+      const ribbonLeft = new THREE.Mesh(
+        ribbonLeftGeometry,
+        ribbonMaterial
+      );
+
+      ribbonLeft.position.set(
+        -boxSize / 2 - 0.015,
+        boxThickness / 2,
+        0
+      );
+
+      ribbonLeft.castShadow = true;
+      giftBox.add(ribbonLeft);
+
+      const ribbonRightGeometry = new THREE.BoxGeometry(
+        boxThickness + 0.025,
+        boxSize - boxThickness,
+        ribbonWidth
+      );
+
+      const ribbonRight = new THREE.Mesh(
+        ribbonRightGeometry,
+        ribbonMaterial
+      );
+
+      ribbonRight.position.set(
+        boxSize / 2 + 0.015,
+        boxThickness / 2,
+        0
+      );
+
+      ribbonRight.castShadow = true;
+      giftBox.add(ribbonRight);
+
+      /* =====================================================
+         LID
       ===================================================== */
 
       const lidGroup = new THREE.Group();
@@ -148,15 +531,21 @@ function GiftBox3D() {
 
       giftBox.add(lidGroup);
 
-      /* =====================================================
-         LID
-      ===================================================== */
+      const lidGeometry = new THREE.BoxGeometry(
+        2.65,
+        0.48,
+        2.65,
+        4,
+        2,
+        4
+      );
 
-      const lidGeometry = new THREE.BoxGeometry(2.65, 0.55, 2.65);
+      const boxLid = new THREE.Mesh(
+        lidGeometry,
+        yellowMaterial
+      );
 
-      const boxLid = new THREE.Mesh(lidGeometry, yellowMaterial);
-
-      boxLid.position.y = 0.27;
+      boxLid.position.y = 0.24;
 
       boxLid.castShadow = true;
       boxLid.receiveShadow = true;
@@ -164,29 +553,37 @@ function GiftBox3D() {
       lidGroup.add(boxLid);
 
       /* =====================================================
-         LID RIBBON FRONT / BACK
+         LID RIBBON
       ===================================================== */
 
-      const lidRibbonZGeometry = new THREE.BoxGeometry(2.7, 0.6, ribbonWidth);
+      const lidRibbonZGeometry = new THREE.BoxGeometry(
+        2.7,
+        0.52,
+        ribbonWidth
+      );
 
-      const lidRibbonZ = new THREE.Mesh(lidRibbonZGeometry, whiteMaterial);
+      const lidRibbonZ = new THREE.Mesh(
+        lidRibbonZGeometry,
+        ribbonMaterial
+      );
 
-      lidRibbonZ.position.y = 0.27;
-
+      lidRibbonZ.position.y = 0.24;
       lidRibbonZ.castShadow = true;
 
       lidGroup.add(lidRibbonZ);
 
-      /* =====================================================
-         LID RIBBON LEFT / RIGHT
-      ===================================================== */
+      const lidRibbonXGeometry = new THREE.BoxGeometry(
+        ribbonWidth,
+        0.52,
+        2.7
+      );
 
-      const lidRibbonXGeometry = new THREE.BoxGeometry(ribbonWidth, 0.6, 2.7);
+      const lidRibbonX = new THREE.Mesh(
+        lidRibbonXGeometry,
+        ribbonMaterial
+      );
 
-      const lidRibbonX = new THREE.Mesh(lidRibbonXGeometry, whiteMaterial);
-
-      lidRibbonX.position.y = 0.27;
-
+      lidRibbonX.position.y = 0.24;
       lidRibbonX.castShadow = true;
 
       lidGroup.add(lidRibbonX);
@@ -197,99 +594,243 @@ function GiftBox3D() {
 
       const bowGroup = new THREE.Group();
 
-      bowGroup.position.set(0, 0.62, 0);
+      bowGroup.position.set(0, 0.58, 0);
 
       lidGroup.add(bowGroup);
 
-      /* =====================================================
-         BOW CENTER
-      ===================================================== */
+      const bowCenterGeometry =
+        new THREE.SphereGeometry(0.25, 32, 32);
 
-      const bowCenterGeometry = new THREE.SphereGeometry(0.26, 32, 32);
-
-      const bowCenter = new THREE.Mesh(bowCenterGeometry, whiteMaterial);
+      const bowCenter = new THREE.Mesh(
+        bowCenterGeometry,
+        ribbonMaterial
+      );
 
       bowCenter.castShadow = true;
-
       bowGroup.add(bowCenter);
 
-      /* =====================================================
-         BOW LOOP
-      ===================================================== */
+      const bowLoopGeometry =
+        new THREE.TorusGeometry(
+          0.37,
+          0.12,
+          20,
+          64
+        );
 
-      const bowLoopGeometry = new THREE.TorusGeometry(0.38, 0.13, 16, 64);
+      const bowLoop1 = new THREE.Mesh(
+        bowLoopGeometry,
+        ribbonMaterial
+      );
 
-      const bowLoop1 = new THREE.Mesh(bowLoopGeometry, whiteMaterial);
-
-      bowLoop1.position.set(0.38, 0.05, 0);
+      bowLoop1.position.set(
+        0.37,
+        0.04,
+        0
+      );
 
       bowLoop1.rotation.y = Math.PI / 2;
       bowLoop1.rotation.x = Math.PI / 4;
+
+      bowLoop1.scale.set(1.15, 0.8, 0.72);
 
       bowLoop1.castShadow = true;
 
       bowGroup.add(bowLoop1);
 
-      /* =====================================================
-         BOW LOOP 2
-      ===================================================== */
+      const bowLoop2 = new THREE.Mesh(
+        bowLoopGeometry,
+        ribbonMaterial
+      );
 
-      const bowLoop2 = new THREE.Mesh(bowLoopGeometry, whiteMaterial);
-
-      bowLoop2.position.set(-0.38, 0.05, 0);
+      bowLoop2.position.set(
+        -0.37,
+        0.04,
+        0
+      );
 
       bowLoop2.rotation.y = Math.PI / 2;
       bowLoop2.rotation.x = -Math.PI / 4;
+
+      bowLoop2.scale.set(1.15, 0.8, 0.72);
 
       bowLoop2.castShadow = true;
 
       bowGroup.add(bowLoop2);
 
       /* =====================================================
+         SOFT GROUND SHADOW
+      ===================================================== */
+
+      const shadowGeometry =
+        new THREE.CircleGeometry(1.9, 64);
+
+      const shadowMaterial =
+        new THREE.MeshBasicMaterial({
+          color: 0x9c7a43,
+          transparent: true,
+          opacity: 0.10,
+          depthWrite: false,
+        });
+
+      const shadow = new THREE.Mesh(
+        shadowGeometry,
+        shadowMaterial
+      );
+
+      shadow.rotation.x = -Math.PI / 2;
+
+      shadow.position.set(
+        0,
+        -1.25,
+        0
+      );
+
+      shadow.scale.set(
+        1.25,
+        0.68,
+        1
+      );
+
+      scene.add(shadow);
+
+      /* =====================================================
          LIGHTING
       ===================================================== */
 
-      const ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
+      const ambientLight =
+        new THREE.AmbientLight(
+          0xffffff,
+          0.68
+        );
 
       scene.add(ambientLight);
 
-      /* =====================================================
-         MAIN LIGHT
-      ===================================================== */
+      const mainLight =
+        new THREE.DirectionalLight(
+          0xffffff,
+          1.55
+        );
 
-      const mainLight = new THREE.DirectionalLight(0xffffff, 1.1);
-
-      mainLight.position.set(5, 8, 8);
+      mainLight.position.set(
+        4.5,
+        8,
+        7
+      );
 
       mainLight.castShadow = true;
 
-      mainLight.shadow.mapSize.width = 1024;
-      mainLight.shadow.mapSize.height = 1024;
+      mainLight.shadow.mapSize.width = 2048;
+      mainLight.shadow.mapSize.height = 2048;
+
+      mainLight.shadow.camera.near = 0.1;
+      mainLight.shadow.camera.far = 20;
+
+      mainLight.shadow.camera.left = -5;
+      mainLight.shadow.camera.right = 5;
+      mainLight.shadow.camera.top = 5;
+      mainLight.shadow.camera.bottom = -5;
+
+      mainLight.shadow.bias = -0.0005;
 
       scene.add(mainLight);
 
-      /* =====================================================
-         SECOND LIGHT
-      ===================================================== */
+      const secondaryLight =
+        new THREE.DirectionalLight(
+          0xfff7e8,
+          0.48
+        );
 
-      const secondaryLight = new THREE.DirectionalLight(0xffffff, 0.45);
-
-      secondaryLight.position.set(-5, 4, -5);
+      secondaryLight.position.set(
+        -5,
+        4,
+        -4
+      );
 
       scene.add(secondaryLight);
 
-      /* =====================================================
-         FRONT LIGHT
-         
-         Giúp mặt trước hộp sáng hơn,
-         tránh cảm giác hộp bị tối.
-      ===================================================== */
+      const frontLight =
+        new THREE.DirectionalLight(
+          0xffffff,
+          0.3
+        );
 
-      const frontLight = new THREE.DirectionalLight(0xffffff, 0.35);
-
-      frontLight.position.set(0, 2, 8);
+      frontLight.position.set(
+        0,
+        3,
+        8
+      );
 
       scene.add(frontLight);
+
+      const innerLight =
+        new THREE.PointLight(
+          0xfff4d6,
+          0.3,
+          4.5
+        );
+
+      innerLight.position.set(
+        0,
+        0.15,
+        0
+      );
+
+      giftBox.add(innerLight);
+
+      /* =====================================================
+         INTERACTION
+         Drag left/right to rotate the gift.
+      ===================================================== */
+
+      let isDragging = false;
+      let pointerX = 0;
+      let targetRotationY = 0;
+      let currentRotationY = 0;
+
+      const onPointerDown = (event) => {
+        isDragging = true;
+        pointerX = event.clientX;
+        renderer.domElement.style.cursor = "grabbing";
+        renderer.domElement.setPointerCapture?.(event.pointerId);
+      };
+
+      const onPointerMove = (event) => {
+        if (!isDragging) return;
+
+        const deltaX = event.clientX - pointerX;
+        pointerX = event.clientX;
+
+        targetRotationY += deltaX * 0.012;
+      };
+
+      const onPointerUp = (event) => {
+        isDragging = false;
+        renderer.domElement.style.cursor = "grab";
+        renderer.domElement.releasePointerCapture?.(event.pointerId);
+      };
+
+      renderer.domElement.style.cursor = "grab";
+      renderer.domElement.style.touchAction = "none";
+
+      renderer.domElement.addEventListener(
+        "pointerdown",
+        onPointerDown
+      );
+
+      renderer.domElement.addEventListener(
+        "pointermove",
+        onPointerMove
+      );
+
+      renderer.domElement.addEventListener(
+        "pointerup",
+        onPointerUp
+      );
+
+      renderer.domElement.addEventListener(
+        "pointercancel",
+        onPointerUp
+      );
 
       /* =====================================================
          ANIMATION
@@ -300,58 +841,76 @@ function GiftBox3D() {
       const animate = () => {
         if (cancelled) return;
 
-        animationFrameId = requestAnimationFrame(animate);
+        animationFrameId =
+          requestAnimationFrame(animate);
 
-        const elapsedTime = clock.getElapsedTime();
+        const elapsedTime =
+          clock.getElapsedTime();
 
-        /* =================================================
-           XOAY NHẸ QUANH TRỤC Y
+        /* ===== Drag rotation + gentle idle motion ===== */
 
-           Không xoay quá nhanh để hộp không bị
-           "văng" sang hai bên.
-        ================================================= */
+        if (!isDragging) {
+          targetRotationY += 0.0015;
+        }
 
-        giftBox.rotation.y = elapsedTime * 0.28;
+        currentRotationY +=
+          (targetRotationY - currentRotationY) * 0.12;
 
-        /* =================================================
-           FLOATING
+        giftBox.rotation.y =
+          currentRotationY;
 
-           Hộp nổi nhẹ lên xuống.
-        ================================================= */
+        /* ===== Stronger, but still friendly bounce ===== */
 
-        giftBox.position.y = -0.15 + Math.sin(elapsedTime * 2) * 0.08;
+        const floatY =
+          Math.sin(elapsedTime * 2.05) *
+          0.075;
 
-        /* =================================================
-           OPEN / CLOSE LID
+        giftBox.position.y =
+          -0.15 + floatY;
 
-           Chuyển động mượt:
-           0 -> đóng
-           1 -> mở
-        ================================================= */
+        /* ===== Shadow reacts to floating ===== */
 
-        const lidProgress = (Math.sin(elapsedTime * 2.2) + 1) / 2;
+        const normalizedFloat =
+          (floatY + 0.065) / 0.13;
 
-        /* =================================================
-           NÂNG NẮP
-        ================================================= */
+        const shadowScale =
+          1.35 - normalizedFloat * 0.18;
 
-        lidGroup.position.y = 1.28 + lidProgress * 0.65;
+        shadow.scale.set(
+          shadowScale,
+          shadowScale * 0.54,
+          1
+        );
 
-        /* =================================================
-           NGHIÊNG NẮP
+        shadow.material.opacity =
+          0.1 + (1 - normalizedFloat) * 0.08;
 
-           Rất nhẹ để tránh làm nắp lệch quá nhiều.
-        ================================================= */
+        /* ===== Lid open / close ===== */
 
-        lidGroup.rotation.z = lidProgress * 0.12;
+        const lidProgress =
+          (Math.sin(elapsedTime * 1.8) + 1) / 2;
 
-        /* =================================================
-           XOAY BOW NHẸ
-        ================================================= */
+        lidGroup.position.y =
+          1.28 + lidProgress * 0.64;
 
-        bowGroup.rotation.y = Math.sin(elapsedTime * 1.5) * 0.08;
+        lidGroup.rotation.z =
+          lidProgress * 0.065;
 
-        renderer.render(scene, camera);
+        lidGroup.rotation.x =
+          -lidProgress * 0.035;
+
+        /* ===== Bow movement ===== */
+
+        bowGroup.rotation.y =
+          Math.sin(elapsedTime * 1.1) * 0.04;
+
+        bowGroup.rotation.z =
+          Math.sin(elapsedTime * 0.9) * 0.018;
+
+        renderer.render(
+          scene,
+          camera
+        );
       };
 
       animate();
@@ -363,50 +922,113 @@ function GiftBox3D() {
       const handleResize = () => {
         if (!containerRef.current) return;
 
-        const newWidth = containerRef.current.clientWidth;
+        const newWidth =
+          containerRef.current.clientWidth;
 
-        const newHeight = containerRef.current.clientHeight;
+        const newHeight =
+          containerRef.current.clientHeight;
 
         if (!newWidth || !newHeight) return;
 
-        camera.aspect = newWidth / newHeight;
+        camera.aspect =
+          newWidth / newHeight;
 
         camera.updateProjectionMatrix();
 
-        renderer.setSize(newWidth, newHeight);
+        renderer.setSize(
+          newWidth,
+          newHeight
+        );
       };
 
-      window.addEventListener("resize", handleResize);
+      window.addEventListener(
+        "resize",
+        handleResize
+      );
 
       /* =====================================================
          CLEANUP
       ===================================================== */
 
       cleanup = () => {
-        window.removeEventListener("resize", handleResize);
+        window.removeEventListener(
+          "resize",
+          handleResize
+        );
+
+        renderer.domElement.removeEventListener(
+          "pointerdown",
+          onPointerDown
+        );
+
+        renderer.domElement.removeEventListener(
+          "pointermove",
+          onPointerMove
+        );
+
+        renderer.domElement.removeEventListener(
+          "pointerup",
+          onPointerUp
+        );
+
+        renderer.domElement.removeEventListener(
+          "pointercancel",
+          onPointerUp
+        );
 
         if (animationFrameId) {
-          cancelAnimationFrame(animationFrameId);
+          cancelAnimationFrame(
+            animationFrameId
+          );
         }
 
         renderer.dispose();
 
-        baseGeometry.dispose();
-        ribbonZGeometry.dispose();
-        ribbonXGeometry.dispose();
+        const geometries = [
+          bottomGeometry,
+          bottomInnerGeometry,
+          leftGeometry,
+          leftInnerGeometry,
+          rightGeometry,
+          rightInnerGeometry,
+          frontGeometry,
+          frontInnerGeometry,
+          backGeometry,
+          backInnerGeometry,
+          rimFrontGeometry,
+          rimBackGeometry,
+          rimLeftGeometry,
+          rimRightGeometry,
+          ribbonFrontGeometry,
+          ribbonBackGeometry,
+          ribbonLeftGeometry,
+          ribbonRightGeometry,
+          lidGeometry,
+          lidRibbonZGeometry,
+          lidRibbonXGeometry,
+          bowCenterGeometry,
+          bowLoopGeometry,
+          shadowGeometry,
+        ];
 
-        lidGeometry.dispose();
-        lidRibbonZGeometry.dispose();
-        lidRibbonXGeometry.dispose();
-
-        bowCenterGeometry.dispose();
-        bowLoopGeometry.dispose();
+        geometries.forEach((geometry) => {
+          geometry.dispose();
+        });
 
         yellowMaterial.dispose();
-        whiteMaterial.dispose();
+        yellowEdgeMaterial.dispose();
+        ribbonMaterial.dispose();
+        innerMaterial.dispose();
+        darkInnerMaterial.dispose();
+        shadowMaterial.dispose();
 
-        if (renderer.domElement && container.contains(renderer.domElement)) {
-          container.removeChild(renderer.domElement);
+        if (
+          renderer.domElement &&
+          container.contains(renderer.domElement)
+        ) {
+          container.removeChild(
+            renderer.domElement
+          );
         }
       };
     };
@@ -417,7 +1039,9 @@ function GiftBox3D() {
       cancelled = true;
 
       if (animationFrameId) {
-        cancelAnimationFrame(animationFrameId);
+        cancelAnimationFrame(
+          animationFrameId
+        );
       }
 
       if (cleanup) {
@@ -432,13 +1056,10 @@ function GiftBox3D() {
       className="
         absolute
         inset-0
-
         flex
         items-center
         justify-center
-
         overflow-hidden
-
         bg-transparent
       "
     />
