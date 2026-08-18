@@ -63,7 +63,15 @@ app.use(compression({
   threshold: 1024, // Only compress responses larger than 1KB
 }));
 
-app.use(express.json());
+// Increase body size limit for unlimited message length and images
+app.use(express.json({ 
+  limit: '50mb' // Allow up to 50MB for very long messages + base64 images
+}));
+app.use(express.urlencoded({ 
+  extended: true, 
+  limit: '50mb' // Also for URL-encoded data
+}));
+
 app.use(cookieParser());
 
 // Serve static files with proper cache headers

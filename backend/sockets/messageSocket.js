@@ -242,18 +242,7 @@ const registerMessageSocket = (io, socket) => {
         return;
       }
 
-      if (trimmedContent.length > 5000) {
-        const result = {
-          success: false,
-          message: "Tin nhắn không được vượt quá 5000 ký tự",
-        };
-
-        if (typeof callback === "function") {
-          callback(result);
-        }
-
-        return;
-      }
+      // No message length limit - allow unlimited characters
 
       /**
        * Validate images array.

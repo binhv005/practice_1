@@ -42,7 +42,7 @@ const messageSchema = new mongoose.Schema(
       type: String,
       default: "",
       trim: true,
-      maxlength: 5000,
+      // No maxlength limit - allow unlimited message length
     },
 
     readBy: [

@@ -134,6 +134,7 @@ const sendMessage = async (req, res) => {
       });
     }
 
+    // Validate content type
     if (typeof content !== "string") {
       return res.status(400).json({
         success: false,
@@ -151,12 +152,7 @@ const sendMessage = async (req, res) => {
       });
     }
 
-    if (trimmedContent.length > 5000) {
-      return res.status(400).json({
-        success: false,
-        message: "Tin nhắn không được vượt quá 5000 ký tự",
-      });
-    }
+    // No message length limit - allow unlimited characters
 
     // Validate images array
     if (images.length > 5) {
@@ -242,9 +238,27 @@ const sendMessage = async (req, res) => {
   } catch (error) {
     console.error("Send message error:", error);
 
+    // Handle specific MongoDB validation errors
+    if (error.name === 'ValidationError') {
+      return res.status(400).json({
+        success: false,
+        message: "Dữ liệu tin nhắn không hợp lệ",
+        error: error.message,
+      });
+    }
+
+    // Handle payload too large error
+    if (error.type === 'entity.too.large') {
+      return res.status(413).json({
+        success: false,
+        message: "Tin nhắn quá lớn. Vui lòng giảm kích thước nội dung hoặc số lượng ảnh",
+      });
+    }
+
     return res.status(500).json({
       success: false,
       message: "Không thể gửi tin nhắn",
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined,
     });
   }
 };
