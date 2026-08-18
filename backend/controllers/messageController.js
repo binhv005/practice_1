@@ -5,6 +5,7 @@ const Message = require("../models/Message");
 
 /**
  * Kiểm tra user hiện tại có thuộc conversation hay không.
+ * Tối ưu: Sử dụng lean() để tăng performance.
  */
 const getAuthorizedConversation = async (conversationId, userId) => {
   if (!mongoose.Types.ObjectId.isValid(conversationId)) {
@@ -14,7 +15,7 @@ const getAuthorizedConversation = async (conversationId, userId) => {
   return Conversation.findOne({
     _id: conversationId,
     participants: userId,
-  });
+  }).lean();
 };
 
 /**
@@ -120,16 +121,6 @@ const sendMessage = async (req, res) => {
     const currentUserId = req.user._id;
     const { content, type = "text", image = null, images = [] } = req.body;
 
-    // Debug logging
-    console.log("📨 REST sendMessage received:", {
-      conversationId,
-      type,
-      content,
-      image,
-      images,
-      imagesLength: images.length,
-    });
-
     const conversation = await getAuthorizedConversation(
       conversationId,
       currentUserId,
@@ -222,26 +213,27 @@ const sendMessage = async (req, res) => {
     });
 
     /**
-     * Update conversation preview - use updateOne for better performance
+     * Tối ưu: Thực hiện update Conversation và populate Message song song
+     * thay vì tuần tự để giảm thời gian chờ.
      */
-    await Conversation.updateOne(
-      { _id: conversationId },
-      {
-        $set: {
-          lastMessage: message._id,
-          lastMessageAt: message.createdAt,
-        },
-      }
-    );
-
-    // Populate only necessary fields
-    const populatedMessage = await Message.findById(message._id)
-      .select('sender content type image images readBy createdAt updatedAt') // Include images field
-      .populate({
-        path: "sender",
-        select: "fullname avatar status",
-      })
-      .lean();
+    const [, populatedMessage] = await Promise.all([
+      Conversation.updateOne(
+        { _id: conversationId },
+        {
+          $set: {
+            lastMessage: message._id,
+            lastMessageAt: message.createdAt,
+          },
+        }
+      ),
+      Message.findById(message._id)
+        .select('sender content type image images readBy createdAt updatedAt')
+        .populate({
+          path: "sender",
+          select: "fullname avatar status",
+        })
+        .lean(),
+    ]);
 
     return res.status(201).json({
       success: true,

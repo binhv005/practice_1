@@ -22,6 +22,20 @@ const initializeSocket = (httpServer) => {
     },
 
     /**
+     * Performance optimizations
+     */
+    pingTimeout: 60000, // How long to wait for ping response before disconnect
+    pingInterval: 25000, // How often to ping clients (default: 25000)
+    upgradeTimeout: 10000, // Time to wait for upgrade to WebSocket
+    maxHttpBufferSize: 1e6, // 1MB max message size
+    
+    /**
+     * Transports optimization - prefer WebSocket
+     */
+    transports: ['websocket', 'polling'],
+    allowUpgrades: true,
+
+    /**
      * Cho phép reconnect.
      */
     connectionStateRecovery: {

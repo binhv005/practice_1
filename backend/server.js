@@ -6,6 +6,7 @@ const connectDB = require("./config/database");
 const cors = require("cors");
 const path = require("path");
 const cookieParser = require("cookie-parser");
+const compression = require("compression");
 
 const productRoutes = require("./routes/productRoutes");
 const categoryRoutes = require("./routes/categoryRoutes");
@@ -49,6 +50,18 @@ const corsOptions = {
 };
 
 app.use(cors(corsOptions));
+
+// Enable gzip compression for faster response times
+app.use(compression({
+  filter: (req, res) => {
+    if (req.headers['x-no-compression']) {
+      return false;
+    }
+    return compression.filter(req, res);
+  },
+  level: 6, // Balance between compression ratio and speed
+  threshold: 1024, // Only compress responses larger than 1KB
+}));
 
 app.use(express.json());
 app.use(cookieParser());

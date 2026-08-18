@@ -19,6 +19,7 @@ const getConversationRoom = (conversationId) => {
 
 /**
  * Kiểm tra user có quyền truy cập conversation.
+ * Tối ưu: Sử dụng lean() để tăng performance.
  */
 const findAuthorizedConversation = async (conversationId, userId) => {
   if (!mongoose.Types.ObjectId.isValid(conversationId)) {
@@ -28,20 +29,10 @@ const findAuthorizedConversation = async (conversationId, userId) => {
   return Conversation.findOne({
     _id: conversationId,
     participants: userId,
-  });
+  }).lean();
 };
 
-/**
- * Populate message sau khi save.
- */
-const populateMessage = async (messageId) => {
-  return Message.findById(messageId)
-    .populate({
-      path: "sender",
-      select: "fullname avatar status",
-    })
-    .lean();
-};
+
 
 /**
  * Emit event tới tất cả socket của một user.
@@ -52,15 +43,11 @@ const populateMessage = async (messageId) => {
 const emitToUser = (io, userId, event, payload) => {
   const socketIds = getUserSockets(userId);
 
-  console.log(`[MessageSocket] emitToUser: userId=${userId}, event=${event}, sockets=${socketIds.size}`);
-
   if (socketIds.size === 0) {
-    console.log(`[MessageSocket] No sockets found for user ${userId}`);
     return;
   }
 
   for (const socketId of socketIds) {
-    console.log(`[MessageSocket] Emitting ${event} to socket ${socketId}`);
     io.to(socketId).emit(event, payload);
   }
 };
@@ -207,16 +194,6 @@ const registerMessageSocket = (io, socket) => {
       const image = payload?.image || null;
       const images = payload?.images || [];
 
-      // Debug logging
-      console.log("📨 Socket message:send received:", {
-        conversationId,
-        type,
-        content,
-        image,
-        images,
-        imagesLength: images.length,
-      });
-
       /**
        * Validate conversationId.
        */
@@ -337,11 +314,12 @@ const registerMessageSocket = (io, socket) => {
       }
 
       /**
-       * Kiểm tra blockedUsers.
+       * Tối ưu: Thực hiện kiểm tra blockedUsers và status trong một Promise.all
+       * để giảm thời gian chờ query.
        */
       const [currentUser, receiver] = await Promise.all([
-        User.findById(currentUserId).select("blockedUsers"),
-        User.findById(receiverId).select("blockedUsers status"),
+        User.findById(currentUserId).select("blockedUsers").lean(),
+        User.findById(receiverId).select("blockedUsers status").lean(),
       ]);
 
       if (!receiver) {
@@ -429,17 +407,27 @@ const registerMessageSocket = (io, socket) => {
       });
 
       /**
-       * Update conversation preview.
+       * Tối ưu: Thực hiện update Conversation và populate Message song song
+       * thay vì tuần tự để giảm thời gian chờ.
        */
-      conversation.lastMessage = message._id;
-      conversation.lastMessageAt = message.createdAt;
-
-      await conversation.save();
-
-      /**
-       * Populate message.
-       */
-      const populatedMessage = await populateMessage(message._id);
+      const [, populatedMessage] = await Promise.all([
+        Conversation.updateOne(
+          { _id: conversationId },
+          {
+            $set: {
+              lastMessage: message._id,
+              lastMessageAt: message.createdAt,
+            },
+          }
+        ),
+        Message.findById(message._id)
+          .select('sender content type image images readBy createdAt updatedAt')
+          .populate({
+            path: "sender",
+            select: "fullname avatar status",
+          })
+          .lean(),
+      ]);
 
       /**
        * Room conversation.
@@ -449,7 +437,6 @@ const registerMessageSocket = (io, socket) => {
       /**
        * Gửi realtime tới tất cả user đang join room.
        */
-      console.log(`[MessageSocket] Emitting message:new to room ${room}`);
       io.to(room).emit("message:new", populatedMessage);
 
       /**
@@ -463,7 +450,6 @@ const registerMessageSocket = (io, socket) => {
        * Điều này đảm bảo receiver nhận được thông báo
        * và cập nhật unread count ngay lập tức.
        */
-      console.log(`[MessageSocket] Emitting message:new directly to receiver ${receiverId.toString()}`);
       emitToUser(io, receiverId.toString(), "message:new", populatedMessage);
 
       /**
@@ -476,7 +462,6 @@ const registerMessageSocket = (io, socket) => {
        * - unread count
        * - conversation order
        */
-      console.log(`[MessageSocket] Emitting conversation:updated to receiver ${receiverId.toString()}`);
       emitToUser(io, receiverId.toString(), "conversation:updated", {
         conversationId,
         lastMessage: populatedMessage,
