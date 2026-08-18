@@ -67,6 +67,8 @@ function MessageInput({ onSend }) {
 
     if (!content && selectedImages.length === 0) return;
 
+    // No message length validation - allow unlimited characters
+
     // If has images, send them
     if (selectedImages.length > 0) {
       handleSendImages();
@@ -184,6 +186,8 @@ function MessageInput({ onSend }) {
       return;
     }
 
+    // No message length validation - allow unlimited characters
+
     console.log("🚀 handleSendImages START - NEW CODE VERSION 3.0");
     console.log("Selected images count:", selectedImages.length);
     console.log("Selected images:", selectedImages);
@@ -224,13 +228,13 @@ function MessageInput({ onSend }) {
       console.log("🔥 CALLING onSend WITH:", {
         type: "image",
         images: validUrls,
-        content: message.trim() || `[${validUrls.length} Hình ảnh]`,
+        content: content || `[${validUrls.length} Hình ảnh]`,
       });
 
       onSend({
         type: "image",
         images: validUrls,
-        content: message.trim() || `[${validUrls.length} Hình ảnh]`,
+        content: content || `[${validUrls.length} Hình ảnh]`,
       });
 
       // Clear selected images and message

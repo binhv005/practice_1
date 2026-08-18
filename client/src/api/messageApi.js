@@ -53,6 +53,7 @@ export const sendMessage = ({
     },
     {
       withCredentials: true,
+      timeout: 10000, // 10 second timeout for faster failure detection
     },
   );
 };
