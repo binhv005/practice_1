@@ -832,12 +832,20 @@ function UserHeader({
               {isLoggedIn && currentUser?.avatar ? (
                 <img
                   src={currentUser.avatar}
-                  alt={currentUser.fullname}
+                  alt={currentUser.fullname || 'User avatar'}
                   className="h-full w-full object-cover"
+                  onError={(e) => {
+                    // Fallback to icon if image fails to load
+                    e.target.style.display = 'none';
+                    e.target.nextSibling.style.display = 'flex';
+                  }}
                 />
-              ) : (
-                <User size={20} strokeWidth={1.8} />
-              )}
+              ) : null}
+              <User 
+                size={20} 
+                strokeWidth={1.8}
+                style={{ display: (isLoggedIn && currentUser?.avatar) ? 'none' : 'block' }}
+              />
             </button>
 
             {/* USER DROPDOWN */}
@@ -878,6 +886,7 @@ function UserHeader({
                           shrink-0
                           items-center
                           justify-center
+                          overflow-hidden
                           rounded-full
                           bg-yellow-100
                           text-sm
@@ -885,7 +894,21 @@ function UserHeader({
                           text-gray-900
                         "
                       >
-                        {currentUser.fullname?.charAt(0).toUpperCase()}
+                        {currentUser.avatar ? (
+                          <img
+                            src={currentUser.avatar}
+                            alt={currentUser.fullname || 'Avatar'}
+                            className="h-full w-full object-cover"
+                            onError={(e) => {
+                              // Fallback to text if image fails
+                              e.target.style.display = 'none';
+                              e.target.parentElement.classList.add('bg-yellow-100');
+                              e.target.parentElement.innerHTML = currentUser.fullname?.charAt(0).toUpperCase();
+                            }}
+                          />
+                        ) : (
+                          currentUser.fullname?.charAt(0).toUpperCase()
+                        )}
                       </div>
 
                       <div className="min-w-0 flex-1">

@@ -58,16 +58,17 @@ const getMessages = async (req, res) => {
       Message.find({
         conversation: conversationId,
       })
+        .select('sender content type image images readBy createdAt updatedAt') // Include images field
         .populate({
           path: "sender",
-          select: "fullname avatar status",
+          select: "fullname avatar status", // Only populate necessary fields
         })
         .sort({
           createdAt: -1,
         })
         .skip(skip)
         .limit(limit)
-        .lean(),
+        .lean(), // Use lean() for better performance
 
       Message.countDocuments({
         conversation: conversationId,
@@ -117,7 +118,17 @@ const sendMessage = async (req, res) => {
   try {
     const { conversationId } = req.params;
     const currentUserId = req.user._id;
-    const { content } = req.body;
+    const { content, type = "text", image = null, images = [] } = req.body;
+
+    // Debug logging
+    console.log("📨 REST sendMessage received:", {
+      conversationId,
+      type,
+      content,
+      image,
+      images,
+      imagesLength: images.length,
+    });
 
     const conversation = await getAuthorizedConversation(
       conversationId,
@@ -141,7 +152,8 @@ const sendMessage = async (req, res) => {
 
     const trimmedContent = content.trim();
 
-    if (!trimmedContent) {
+    // Allow empty content if there are images
+    if (!trimmedContent && images.length === 0 && !image) {
       return res.status(400).json({
         success: false,
         message: "Tin nhắn không được để trống",
@@ -152,6 +164,14 @@ const sendMessage = async (req, res) => {
       return res.status(400).json({
         success: false,
         message: "Tin nhắn không được vượt quá 5000 ký tự",
+      });
+    }
+
+    // Validate images array
+    if (images.length > 5) {
+      return res.status(400).json({
+        success: false,
+        message: "Tối đa 5 ảnh mỗi tin nhắn",
       });
     }
 
@@ -173,22 +193,50 @@ const sendMessage = async (req, res) => {
       });
     }
 
-    const message = await Message.create({
+    const messageData = {
       conversation: conversationId,
       sender: currentUserId,
-      content: trimmedContent,
+      content: trimmedContent || `[${images.length} Hình ảnh]`,
+      type,
       readBy: [currentUserId],
+    };
+
+    // Add image fields if present
+    if (image) {
+      messageData.image = image;
+    }
+
+    if (images.length > 0) {
+      messageData.images = images;
+    }
+
+    const message = await Message.create(messageData);
+
+    // Debug: Check what was saved
+    console.log("💾 Message created in DB:", {
+      _id: message._id,
+      type: message.type,
+      image: message.image,
+      images: message.images,
+      content: message.content,
     });
 
     /**
-     * Update conversation preview.
+     * Update conversation preview - use updateOne for better performance
      */
-    conversation.lastMessage = message._id;
-    conversation.lastMessageAt = message.createdAt;
+    await Conversation.updateOne(
+      { _id: conversationId },
+      {
+        $set: {
+          lastMessage: message._id,
+          lastMessageAt: message.createdAt,
+        },
+      }
+    );
 
-    await conversation.save();
-
+    // Populate only necessary fields
     const populatedMessage = await Message.findById(message._id)
+      .select('sender content type image images readBy createdAt updatedAt') // Include images field
       .populate({
         path: "sender",
         select: "fullname avatar status",

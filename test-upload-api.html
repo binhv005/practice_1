@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Upload API</title>
+    <style>
+        body { font-family: Arial; padding: 20px; }
+        button { padding: 10px 20px; margin: 10px; cursor: pointer; }
+        pre { background: #f4f4f4; padding: 10px; border-radius: 5px; }
+        .success { color: green; }
+        .error { color: red; }
+    </style>
+</head>
+<body>
+    <h1>🧪 Test Upload API</h1>
+    
+    <input type="file" id="fileInput" accept="image/*">
+    <button onclick="testUpload()">Upload & Test</button>
+    
+    <h2>Results:</h2>
+    <div id="results"></div>
+    
+    <script>
+        async function testUpload() {
+            const fileInput = document.getElementById('fileInput');
+            const resultsDiv = document.getElementById('results');
+            
+            if (!fileInput.files[0]) {
+                resultsDiv.innerHTML = '<p class="error">Please select a file first!</p>';
+                return;
+            }
+            
+            const file = fileInput.files[0];
+            resultsDiv.innerHTML = '<p>⏳ Uploading...</p>';
+            
+            try {
+                // Create FormData
+                const formData = new FormData();
+                formData.append('image', file);
+                
+                // Call API
+                const response = await fetch('http://localhost:3000/api/products/upload-image', {
+                    method: 'POST',
+                    body: formData,
+                    credentials: 'include'
+                });
+                
+                const data = await response.json();
+                
+                console.log('Full response:', response);
+                console.log('Response data:', data);
+                
+                // Display results
+                let html = '<h3>Response:</h3>';
+                html += '<pre>' + JSON.stringify(data, null, 2) + '</pre>';
+                
+                // Extract imageUrl
+                const imageUrl = data?.data?.imageUrl;
+                
+                if (imageUrl) {
+                    html += '<h3 class="success">✅ Image URL Extracted:</h3>';
+                    html += '<p><a href="' + imageUrl + '" target="_blank">' + imageUrl + '</a></p>';
+                    html += '<img src="' + imageUrl + '" style="max-width: 300px; border: 2px solid green;">';
+                } else {
+                    html += '<h3 class="error">❌ No imageUrl found!</h3>';
+                    html += '<p>Expected: data.data.imageUrl</p>';
+                }
+                
+                resultsDiv.innerHTML = html;
+                
+            } catch (error) {
+                console.error('Upload error:', error);
+                resultsDiv.innerHTML = '<p class="error">❌ Error: ' + error.message + '</p>';
+            }
+        }
+    </script>
+</body>
+</html>

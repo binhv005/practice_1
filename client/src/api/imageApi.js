@@ -12,5 +12,6 @@ export const uploadProductImage = async (file) => {
     formData,
   );
 
-  return response.data.data.imageUrl;
+  // Return full response object so caller can access response.data.data.imageUrl
+  return response;
 };

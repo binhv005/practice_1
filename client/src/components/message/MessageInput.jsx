@@ -11,7 +11,9 @@ const POPULAR_EMOJIS = [
 function MessageInput({ onSend }) {
   const [message, setMessage] = useState("");
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
-  const [uploadingImage, setUploadingImage] = useState(false);
+  const [uploadingImages, setUploadingImages] = useState(false);
+  const [selectedImages, setSelectedImages] = useState([]); // Array of {file, preview, uploading}
+  const [imageError, setImageError] = useState("");
 
   const textareaRef = useRef(null);
   const fileInputRef = useRef(null);
@@ -63,7 +65,13 @@ function MessageInput({ onSend }) {
   const handleSend = () => {
     const content = message.trim();
 
-    if (!content) return;
+    if (!content && selectedImages.length === 0) return;
+
+    // If has images, send them
+    if (selectedImages.length > 0) {
+      handleSendImages();
+      return;
+    }
 
     onSend(content);
 
@@ -108,53 +116,141 @@ function MessageInput({ onSend }) {
   };
 
   const handleImageButtonClick = () => {
-    if (uploadingImage) return;
+    if (uploadingImages) return;
+    if (selectedImages.length >= 5) {
+      setImageError("Tối đa 5 ảnh mỗi tin nhắn");
+      setTimeout(() => setImageError(""), 3000);
+      return;
+    }
     fileInputRef.current?.click();
   };
 
   const handleFileChange = async (event) => {
-    const file = event.target.files?.[0];
+    const files = Array.from(event.target.files || []);
 
-    if (!file) return;
+    if (files.length === 0) return;
 
-    if (!file.type.startsWith("image/")) {
-      alert("Vui lòng chọn file hình ảnh (JPG, PNG, WebP...)");
+    // Check total count
+    const remainingSlots = 5 - selectedImages.length;
+    if (files.length > remainingSlots) {
+      setImageError(`Chỉ có thể thêm ${remainingSlots} ảnh nữa (tối đa 5 ảnh)`);
+      setTimeout(() => setImageError(""), 3000);
       event.target.value = "";
       return;
     }
 
-    // Limit 10MB
-    if (file.size > 10 * 1024 * 1024) {
-      alert("Kích thước ảnh không được vượt quá 10MB");
-      event.target.value = "";
+    // Validate each file
+    for (const file of files) {
+      if (!file.type.startsWith("image/")) {
+        setImageError("Vui lòng chỉ chọn file hình ảnh (JPG, PNG, WebP...)");
+        setTimeout(() => setImageError(""), 3000);
+        event.target.value = "";
+        return;
+      }
+
+      if (file.size > 10 * 1024 * 1024) {
+        setImageError("Kích thước mỗi ảnh không được vượt quá 10MB");
+        setTimeout(() => setImageError(""), 3000);
+        event.target.value = "";
+        return;
+      }
+    }
+
+    // Add files to selected images with preview
+    const newImages = files.map((file) => ({
+      file,
+      preview: URL.createObjectURL(file),
+      uploading: false,
+    }));
+
+    setSelectedImages((prev) => [...prev, ...newImages]);
+    event.target.value = "";
+  };
+
+  const handleRemoveImage = (index) => {
+    setSelectedImages((prev) => {
+      const updated = [...prev];
+      // Revoke object URL to prevent memory leak
+      URL.revokeObjectURL(updated[index].preview);
+      updated.splice(index, 1);
+      return updated;
+    });
+    setImageError("");
+  };
+
+  const handleSendImages = async () => {
+    if (selectedImages.length === 0) {
+      console.error("❌ handleSendImages: No images selected!");
       return;
     }
+
+    console.log("🚀 handleSendImages START - NEW CODE VERSION 3.0");
+    console.log("Selected images count:", selectedImages.length);
+    console.log("Selected images:", selectedImages);
 
     try {
-      setUploadingImage(true);
+      setUploadingImages(true);
 
-      const response = await uploadProductImage(file);
+      // Upload all images in parallel
+      const uploadPromises = selectedImages.map(async (img) => {
+        try {
+          const response = await uploadProductImage(img.file);
+          console.log("Upload response:", response);
+          // Extract correct path: response.data.data.imageUrl
+          const imageUrl = response?.data?.data?.imageUrl;
+          if (!imageUrl) {
+            console.error("Invalid upload response structure:", response);
+            return null;
+          }
+          console.log("Extracted imageUrl:", imageUrl);
+          return imageUrl;
+        } catch (error) {
+          console.error("Upload single image failed:", error);
+          return null;
+        }
+      });
 
-      const imageUrl =
-        response?.data?.data?.imageUrl ||
-        response?.data?.imageUrl ||
-        response?.data?.url;
+      const imageUrls = await Promise.all(uploadPromises);
+      console.log("All upload results:", imageUrls);
 
-      if (!imageUrl) {
+      // Check if all uploads succeeded
+      const validUrls = imageUrls.filter((url) => url && typeof url === 'string');
+      if (validUrls.length === 0) {
         throw new Error("Không nhận được đường dẫn ảnh sau khi upload");
       }
 
+      console.log("Valid image URLs to send:", validUrls);
+
+      console.log("🔥 CALLING onSend WITH:", {
+        type: "image",
+        images: validUrls,
+        content: message.trim() || `[${validUrls.length} Hình ảnh]`,
+      });
+
       onSend({
         type: "image",
-        image: imageUrl,
-        content: "[Hình ảnh]",
+        images: validUrls,
+        content: message.trim() || `[${validUrls.length} Hình ảnh]`,
+      });
+
+      // Clear selected images and message
+      selectedImages.forEach((img) => URL.revokeObjectURL(img.preview));
+      setSelectedImages([]);
+      setMessage("");
+      setImageError("");
+
+      requestAnimationFrame(() => {
+        if (textareaRef.current) {
+          textareaRef.current.style.height = "44px";
+          textareaRef.current.style.overflowY = "hidden";
+        }
       });
     } catch (error) {
-      console.error("Upload image message error:", error);
-      alert("Không thể gửi ảnh. Vui lòng thử lại!");
+      console.error("Upload images error:", error);
+      setImageError("Không thể gửi ảnh. Vui lòng thử lại!");
+      setTimeout(() => setImageError(""), 3000);
     } finally {
-      setUploadingImage(false);
-      event.target.value = "";
+      setUploadingImages(false);
     }
   };
 
@@ -172,14 +268,57 @@ function MessageInput({ onSend }) {
         border-[#eeeeee]
       "
     >
-      {/* Hidden File Input */}
+      {/* Hidden File Input - Allow multiple */}
       <input
         ref={fileInputRef}
         type="file"
         accept="image/*"
+        multiple
         onChange={handleFileChange}
         className="hidden"
       />
+
+      {/* Image Preview Area */}
+      {selectedImages.length > 0 && (
+        <div className="mb-3 flex flex-wrap gap-2 p-2 bg-gray-50 rounded-xl">
+          {selectedImages.map((img, index) => (
+            <div key={index} className="relative group">
+              <img
+                src={img.preview}
+                alt={`Preview ${index + 1}`}
+                className="w-20 h-20 object-cover rounded-lg border-2 border-gray-200"
+              />
+              <button
+                type="button"
+                onClick={() => handleRemoveImage(index)}
+                className="
+                  absolute -top-2 -right-2
+                  w-6 h-6
+                  bg-red-500 text-white
+                  rounded-full
+                  flex items-center justify-center
+                  opacity-0 group-hover:opacity-100
+                  transition
+                  hover:bg-red-600
+                "
+                aria-label="Xóa ảnh"
+              >
+                ✕
+              </button>
+            </div>
+          ))}
+          <div className="flex items-center justify-center w-20 h-20 border-2 border-dashed border-gray-300 rounded-lg text-gray-400 text-xs text-center">
+            {selectedImages.length}/5
+          </div>
+        </div>
+      )}
+
+      {/* Error Message */}
+      {imageError && (
+        <div className="mb-2 px-3 py-2 bg-red-50 border border-red-200 rounded-lg text-sm text-red-600">
+          {imageError}
+        </div>
+      )}
 
       {/* Emoji Picker Popover */}
       {showEmojiPicker && (
@@ -245,7 +384,7 @@ function MessageInput({ onSend }) {
           <button
             type="button"
             onClick={handleImageButtonClick}
-            disabled={uploadingImage}
+            disabled={uploadingImages}
             className="
               p-2
               rounded-full
@@ -256,7 +395,7 @@ function MessageInput({ onSend }) {
             "
             aria-label="Đính kèm ảnh"
           >
-            {uploadingImage ? (
+            {uploadingImages ? (
               <Loader2 size={24} className="animate-spin text-[#ffba00]" />
             ) : (
               <ImagePlus size={24} />
@@ -310,7 +449,7 @@ function MessageInput({ onSend }) {
         <button
           type="button"
           onClick={handleSend}
-          disabled={!message.trim() && !uploadingImage}
+          disabled={!message.trim() && selectedImages.length === 0}
           aria-label="Gửi"
           className="
             bg-[#ffba00]

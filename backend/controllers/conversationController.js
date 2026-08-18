@@ -18,16 +18,18 @@ const getConversations = async (req, res) => {
   try {
     const userId = req.user._id;
 
+    // Use aggregation pipeline for better performance
     const conversations = await Conversation.find({
       participants: userId,
     })
+      .select('participants product lastMessage lastMessageAt createdAt updatedAt') // Only select needed fields
       .populate({
         path: "participants",
-        select: "fullname avatar status",
+        select: "fullname avatar status", // Remove bio to reduce payload
       })
       .populate({
         path: "product",
-        select: "title images category address status featured",
+        select: "title images category status", // Reduced fields
         populate: {
           path: "category",
           select: "name",
@@ -35,6 +37,7 @@ const getConversations = async (req, res) => {
       })
       .populate({
         path: "lastMessage",
+        select: 'sender content type image images createdAt', // Include images field
         populate: {
           path: "sender",
           select: "fullname avatar",
@@ -42,34 +45,45 @@ const getConversations = async (req, res) => {
       })
       .sort({
         lastMessageAt: -1,
-        updatedAt: -1,
       })
-      .lean();
+      .lean(); // Use lean() for better performance
 
-    const result = await Promise.all(
-      conversations.map(async (conversation) => {
-        const unreadCount = await Message.countDocuments({
-          conversation: conversation._id,
-          sender: {
-            $ne: userId,
-          },
-          readBy: {
-            $ne: userId,
-          },
+    // Batch query for unread counts - more efficient than individual queries
+    const conversationIds = conversations.map(c => c._id);
+    const unreadCounts = await Message.aggregate([
+      {
+        $match: {
+          conversation: { $in: conversationIds },
+          sender: { $ne: userId },
+          readBy: { $ne: userId },
           deletedAt: null,
-        });
+        },
+      },
+      {
+        $group: {
+          _id: '$conversation',
+          count: { $sum: 1 },
+        },
+      },
+    ]);
 
-        const otherParticipant = conversation.participants.find(
-          (participant) => participant._id.toString() !== userId.toString(),
-        );
+    // Create a map for quick lookup
+    const unreadMap = {};
+    unreadCounts.forEach(item => {
+      unreadMap[item._id.toString()] = item.count;
+    });
 
-        return {
-          ...conversation,
-          otherParticipant: otherParticipant || null,
-          unreadCount,
-        };
-      }),
-    );
+    const result = conversations.map(conversation => {
+      const otherParticipant = conversation.participants.find(
+        (participant) => participant._id.toString() !== userId.toString(),
+      );
+
+      return {
+        ...conversation,
+        otherParticipant: otherParticipant || null,
+        unreadCount: unreadMap[conversation._id.toString()] || 0,
+      };
+    });
 
     return res.status(200).json({
       success: true,
@@ -121,36 +135,21 @@ const createConversation = async (req, res) => {
     }
 
     // =====================================================
-    // VALIDATE PRODUCT
+    // VALIDATE PRODUCT (if provided)
     // =====================================================
 
-    let product = null;
-
-    if (productId) {
-      if (!mongoose.Types.ObjectId.isValid(productId)) {
-        return res.status(400).json({
-          success: false,
-          message: "productId không hợp lệ",
-        });
-      }
-
-      product = await Product.findById(productId);
-
-      if (!product) {
-        return res.status(404).json({
-          success: false,
-          message: "Sản phẩm không tồn tại",
-        });
-      }
+    if (productId && !mongoose.Types.ObjectId.isValid(productId)) {
+      return res.status(400).json({
+        success: false,
+        message: "productId không hợp lệ",
+      });
     }
 
-    // =====================================================
-    // FIND TARGET USER
-    // =====================================================
-
-    const targetUser = await User.findById(userId).select(
-      "fullname avatar status blockedUsers",
-    );
+    // Parallel validation for better performance
+    const [targetUser, product] = await Promise.all([
+      User.findById(userId).select("fullname avatar status blockedUsers").lean(),
+      productId ? Product.findById(productId).select('_id').lean() : null,
+    ]);
 
     if (!targetUser) {
       return res.status(404).json({
@@ -173,12 +172,18 @@ const createConversation = async (req, res) => {
       });
     }
 
+    if (productId && !product) {
+      return res.status(404).json({
+        success: false,
+        message: "Sản phẩm không tồn tại",
+      });
+    }
+
     // =====================================================
     // CHECK BLOCK
     // =====================================================
 
-    const currentUser =
-      await User.findById(currentUserId).select("blockedUsers");
+    const currentUser = await User.findById(currentUserId).select("blockedUsers").lean();
 
     const blockedByCurrentUser = currentUser?.blockedUsers?.some(
       (id) => id.toString() === userId.toString(),
@@ -199,48 +204,18 @@ const createConversation = async (req, res) => {
     // FIND EXISTING CONVERSATION
     // =====================================================
 
-    /*
-     * Nếu có productId:
-     *
-     * tìm conversation giữa 2 người
-     * liên quan tới sản phẩm đó.
-     *
-     * Điều này cho phép:
-     *
-     * User A
-     *   ├── chat về iPhone
-     *   └── chat về Laptop
-     *
-     * trở thành 2 conversation khác nhau.
-     */
-
     let conversation = null;
 
     if (productId) {
       conversation = await Conversation.findOne({
-        participants: {
-          $all: [currentUserId, userId],
-        },
-
+        participants: { $all: [currentUserId, userId] },
         product: productId,
-      });
+      }).lean();
     } else {
       conversation = await Conversation.findOne({
-        participants: {
-          $all: [currentUserId, userId],
-        },
-
-        $or: [
-          {
-            product: null,
-          },
-          {
-            product: {
-              $exists: false,
-            },
-          },
-        ],
-      });
+        participants: { $all: [currentUserId, userId] },
+        $or: [{ product: null }, { product: { $exists: false } }],
+      }).lean();
     }
 
     // =====================================================
@@ -250,24 +225,23 @@ const createConversation = async (req, res) => {
     if (!conversation) {
       conversation = await Conversation.create({
         participants: [currentUserId, userId],
-
         product: productId || null,
       });
     }
 
     // =====================================================
-    // POPULATE
+    // POPULATE - Reduced fields
     // =====================================================
 
     const populatedConversation = await Conversation.findById(conversation._id)
+      .select('participants product lastMessage lastMessageAt createdAt updatedAt')
       .populate({
         path: "participants",
-        select: "fullname avatar status bio",
+        select: "fullname avatar status",
       })
       .populate({
         path: "product",
-        select:
-          "title description images category address status featured interestCount createdAt",
+        select: "title images category status",
         populate: {
           path: "category",
           select: "name",
@@ -275,6 +249,7 @@ const createConversation = async (req, res) => {
       })
       .populate({
         path: "lastMessage",
+        select: 'sender content type createdAt',
         populate: {
           path: "sender",
           select: "fullname avatar",
@@ -326,14 +301,14 @@ const getConversation = async (req, res) => {
       _id: conversationId,
       participants: userId,
     })
+      .select('participants product lastMessage lastMessageAt createdAt updatedAt')
       .populate({
         path: "participants",
-        select: "fullname avatar status bio",
+        select: "fullname avatar status", // Removed bio
       })
       .populate({
         path: "product",
-        select:
-          "title description images category address status featured interestCount createdAt",
+        select: "title images category status", // Reduced fields
         populate: {
           path: "category",
           select: "name",
@@ -341,6 +316,7 @@ const getConversation = async (req, res) => {
       })
       .populate({
         path: "lastMessage",
+        select: 'sender content type createdAt',
         populate: {
           path: "sender",
           select: "fullname avatar",
@@ -361,12 +337,8 @@ const getConversation = async (req, res) => {
 
     const unreadCount = await Message.countDocuments({
       conversation: conversation._id,
-      sender: {
-        $ne: userId,
-      },
-      readBy: {
-        $ne: userId,
-      },
+      sender: { $ne: userId },
+      readBy: { $ne: userId },
       deletedAt: null,
     });
 
@@ -483,7 +455,7 @@ const sendMessage = async (req, res) => {
 
     const userId = req.user._id;
 
-    const { content, type, image } = req.body;
+    const { content, type, image, images } = req.body;
 
     if (!mongoose.Types.ObjectId.isValid(conversationId)) {
       return res.status(400).json({
@@ -494,12 +466,16 @@ const sendMessage = async (req, res) => {
 
     const messageType = type === "image" ? "image" : "text";
     const messageContent = typeof content === "string" ? content.trim() : "";
-    const messageImage =
-      typeof image === "string" && image.trim()
-        ? image.trim()
-        : messageType === "image"
-          ? messageContent
-          : null;
+    
+    // Handle single image (legacy) or multiple images
+    let messageImages = [];
+    if (images && Array.isArray(images)) {
+      messageImages = images.filter(img => typeof img === 'string' && img.trim()).slice(0, 5);
+    } else if (image && typeof image === 'string' && image.trim()) {
+      messageImages = [image.trim()];
+    } else if (messageType === "image" && messageContent) {
+      messageImages = [messageContent];
+    }
 
     if (messageType === "text" && !messageContent) {
       return res.status(400).json({
@@ -508,10 +484,17 @@ const sendMessage = async (req, res) => {
       });
     }
 
-    if (messageType === "image" && !messageImage) {
+    if (messageType === "image" && messageImages.length === 0) {
       return res.status(400).json({
         success: false,
         message: "Hình ảnh không hợp lệ",
+      });
+    }
+
+    if (messageImages.length > 5) {
+      return res.status(400).json({
+        success: false,
+        message: "Tối đa 5 ảnh mỗi tin nhắn",
       });
     }
 
@@ -535,8 +518,9 @@ const sendMessage = async (req, res) => {
       conversation: conversationId,
       sender: userId,
       type: messageType,
-      image: messageImage,
-      content: messageContent || (messageType === "image" ? "[Hình ảnh]" : ""),
+      image: messageImages[0] || null, // Keep backward compatibility
+      images: messageImages,
+      content: messageContent || (messageType === "image" ? `[${messageImages.length} Hình ảnh]` : ""),
       readBy: [userId],
     });
 

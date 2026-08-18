@@ -27,6 +27,17 @@ const messageSchema = new mongoose.Schema(
       default: null,
     },
 
+    images: {
+      type: [String],
+      default: [],
+      validate: {
+        validator: function(v) {
+          return v.length <= 5; // Maximum 5 images
+        },
+        message: 'Tối đa 5 ảnh mỗi tin nhắn'
+      }
+    },
+
     content: {
       type: String,
       default: "",
@@ -50,6 +61,12 @@ const messageSchema = new mongoose.Schema(
     timestamps: true,
   },
 );
+
+// Compound indexes for faster queries
+messageSchema.index({ conversation: 1, createdAt: -1 }); // For getting messages in a conversation sorted by time
+messageSchema.index({ conversation: 1, sender: 1 }); // For filtering messages by conversation and sender
+messageSchema.index({ conversation: 1, readBy: 1 }); // For unread count queries
+messageSchema.index({ sender: 1, createdAt: -1 }); // For user's message history
 
 module.exports =
   mongoose.models.Message || mongoose.model("Message", messageSchema);

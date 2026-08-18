@@ -53,7 +53,19 @@ app.use(cors(corsOptions));
 app.use(express.json());
 app.use(cookieParser());
 
-app.use("/uploads", express.static(path.join(__dirname, "uploads")));
+// Serve static files with proper cache headers
+app.use("/uploads", express.static(path.join(__dirname, "uploads"), {
+  etag: true,
+  lastModified: true,
+  setHeaders: (res, filePath) => {
+    // Set cache control headers for images
+    if (filePath.endsWith('.jpg') || filePath.endsWith('.jpeg') || 
+        filePath.endsWith('.png') || filePath.endsWith('.webp') || 
+        filePath.endsWith('.gif')) {
+      res.setHeader('Cache-Control', 'public, max-age=31536000'); // 1 year cache
+    }
+  }
+}));
 
 app.use("/api/products", productRoutes);
 

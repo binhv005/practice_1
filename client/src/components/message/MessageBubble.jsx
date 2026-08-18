@@ -1,6 +1,19 @@
 import { Check, CheckCheck } from "lucide-react";
 
 function MessageBubble({ message, currentUserId }) {
+  // Debug logging - ALWAYS log for image messages
+  console.log("🔍 MessageBubble received message:", {
+    _id: message._id,
+    type: message.type,
+    hasImagesField: Boolean(message.images),
+    imagesArray: message.images,
+    imagesLength: message.images?.length,
+    hasImageField: Boolean(message.image),
+    imageField: message.image,
+    content: message.content,
+    fullMessage: message
+  });
+
   if (message.type === "system") {
     return (
       <div className="flex justify-center">
@@ -18,10 +31,21 @@ function MessageBubble({ message, currentUserId }) {
   
   const isMe = senderId === currentUserId?.toString();
 
-  // Determine if message is an image
+  // Check for multiple images
+  const hasMultipleImages = message.images && Array.isArray(message.images) && message.images.length > 0;
+  
+  console.log("🔍 Image Check:", {
+    hasMultipleImages,
+    imageField: message.image,
+    imagesField: message.images,
+    messageType: message.type
+  });
+  
+  // Determine if message is a single image (legacy support)
   const isImageMessage =
     message.type === "image" ||
     Boolean(message.image) ||
+    hasMultipleImages ||
     (typeof message.content === "string" &&
       (message.content.startsWith("http://") ||
         message.content.startsWith("https://")) &&
@@ -29,7 +53,17 @@ function MessageBubble({ message, currentUserId }) {
         message.content.includes("/uploads/") ||
         /\.(jpg|jpeg|png|webp|gif|svg)$/i.test(message.content)));
 
-  const imageUrl = message.image || (isImageMessage ? message.content : null);
+  const imageUrl = message.image || (isImageMessage && !hasMultipleImages ? message.content : null);
+  const imageUrls = hasMultipleImages ? message.images : (imageUrl ? [imageUrl] : []);
+
+  console.log("🎨 Final Render Decision:", {
+    isImageMessage,
+    imageUrl,
+    imageUrls,
+    imageUrlsLength: imageUrls.length,
+    willRenderImages: isImageMessage && imageUrls.length > 0,
+    firstImageUrl: imageUrls[0]
+  });
 
   // Determine if message is read
   const isRead = message.readBy && Array.isArray(message.readBy) && message.readBy.length > 1;
@@ -43,6 +77,15 @@ function MessageBubble({ message, currentUserId }) {
 
   const displayTime = formatTime(message.createdAt || message.timestamp);
 
+  // Grid layout based on number of images
+  const getGridClass = (count) => {
+    if (count === 1) return "grid-cols-1";
+    if (count === 2) return "grid-cols-2";
+    if (count === 3) return "grid-cols-2";
+    if (count === 4) return "grid-cols-2";
+    return "grid-cols-3"; // 5 images
+  };
+
   return (
     <div
       className={`
@@ -54,8 +97,8 @@ function MessageBubble({ message, currentUserId }) {
         ${isMe ? "items-end self-end" : "items-start self-start"}
       `}
     >
-      {/* Image or Text */}
-      {isImageMessage && imageUrl ? (
+      {/* Images Grid */}
+      {isImageMessage && imageUrls.length > 0 ? (
         <div
           className={`
             overflow-hidden
@@ -70,19 +113,36 @@ function MessageBubble({ message, currentUserId }) {
             }
           `}
         >
-          <a
-            href={imageUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="block"
-          >
-            <img
-              src={imageUrl}
-              alt="Ảnh tin nhắn"
-              className="max-h-64 w-auto max-w-full rounded-xl object-contain block sm:max-w-xs"
-              loading="lazy"
-            />
-          </a>
+          <div className={`grid gap-1 p-1 ${getGridClass(imageUrls.length)}`}>
+            {imageUrls.map((url, index) => (
+              <a
+                key={index}
+                href={url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="block overflow-hidden rounded-lg hover:opacity-90 transition"
+              >
+                <img
+                  src={url}
+                  alt={`Ảnh ${index + 1}`}
+                  className={`
+                    w-full object-cover
+                    ${imageUrls.length === 1 ? "max-h-64" : "h-32 sm:h-40"}
+                    ${imageUrls.length === 3 && index === 0 ? "row-span-2 h-full" : ""}
+                  `}
+                  loading="lazy"
+                />
+              </a>
+            ))}
+          </div>
+          {/* Optional caption for images */}
+          {message.content && 
+           !message.content.startsWith("[") && 
+           !message.content.startsWith("http") && (
+            <div className="px-3 py-2 bg-gray-50 border-t">
+              <p className="text-sm text-gray-700">{message.content}</p>
+            </div>
+          )}
         </div>
       ) : (
         <div

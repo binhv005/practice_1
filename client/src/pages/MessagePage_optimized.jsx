@@ -81,6 +81,29 @@ function MessagePage() {
 
   /*
    * =====================================================
+   * DEBUG ROUTE
+   * =====================================================
+   */
+
+  useEffect(() => {
+  }, [
+    location.state,
+    incomingConversationId,
+    incomingProduct,
+    incomingProductId,
+  ]);
+
+  /*
+   * =====================================================
+   * DEBUG USER
+   * =====================================================
+   */
+
+  useEffect(() => {
+  }, [currentUser, currentUserId]);
+
+  /*
+   * =====================================================
    * SELECTED USER
    * =====================================================
    */
@@ -114,6 +137,15 @@ function MessagePage() {
       }) || null
     );
   }, [selectedConversation, currentUserId]);
+
+  /*
+   * =====================================================
+   * DEBUG SELECTED CONVERSATION
+   * =====================================================
+   */
+
+  useEffect(() => {
+  }, [selectedConversation, loadingConversations, conversations]);
 
   /*
    * =====================================================
@@ -192,8 +224,6 @@ function MessagePage() {
       return;
     }
 
-    console.log("Connecting socket for user:", currentUserId);
-
     connectSocket();
 
     return () => {
@@ -226,11 +256,6 @@ function MessagePage() {
    */
 
   const loadConversations = useCallback(async () => {
-    console.log("========== LOAD CONVERSATIONS START ==========");
-
-    console.log("currentUserId:", currentUserId);
-
-    console.log("incomingConversationId:", incomingConversationId);
 
     try {
       setLoadingConversations(true);
@@ -240,18 +265,9 @@ function MessagePage() {
        * GET ALL CONVERSATIONS
        * ---------------------------------------------
        */
-
-      console.log("Calling getConversations()...");
+...");
 
       const response = await getConversations();
-
-      console.log("========== GET CONVERSATIONS ==========");
-
-      console.log("response:", response);
-
-      console.log("response.data:", response?.data);
-
-      console.log("========================================");
 
       /*
        * ---------------------------------------------
@@ -277,8 +293,6 @@ function MessagePage() {
         data = response.conversations;
       }
 
-      console.log("NORMALIZED CONVERSATIONS:", data);
-
       /*
        * ---------------------------------------------
        * Update sidebar
@@ -294,7 +308,6 @@ function MessagePage() {
        */
 
       if (incomingConversationId) {
-        console.log("Looking for conversation:", incomingConversationId);
 
         /*
          * Tìm trong danh sách hiện tại
@@ -306,8 +319,6 @@ function MessagePage() {
             incomingConversationId?.toString(),
         );
 
-        console.log("TARGET FROM LIST:", targetConversation);
-
         /*
          * -------------------------------------------
          * Nếu không tìm thấy trong danh sách
@@ -316,25 +327,12 @@ function MessagePage() {
          */
 
         if (!targetConversation) {
-          console.log("Conversation not found in list.");
-
-          console.log("Calling getConversation():", incomingConversationId);
+:", incomingConversationId);
 
           try {
             const conversationResponse = await getConversation(
               incomingConversationId,
             );
-
-            console.log("========== GET TARGET CONVERSATION ==========");
-
-            console.log("conversationResponse:", conversationResponse);
-
-            console.log(
-              "conversationResponse.data:",
-              conversationResponse?.data,
-            );
-
-            console.log("==============================================");
 
             /*
              * Normalize conversation response
@@ -349,8 +347,6 @@ function MessagePage() {
             } else if (conversationResponse?.data?._id) {
               targetConversation = conversationResponse.data;
             }
-
-            console.log("NORMALIZED TARGET CONVERSATION:", targetConversation);
           } catch (error) {
             console.error("Load target conversation error:", error);
           }
@@ -377,8 +373,6 @@ function MessagePage() {
                 }
               : {}),
           };
-
-          console.log("FINAL TARGET CONVERSATION:", enrichedConversation);
 
           /*
            * Set selected conversation
@@ -483,8 +477,6 @@ function MessagePage() {
       }
     } finally {
       setLoadingConversations(false);
-
-      console.log("========== LOAD CONVERSATIONS END ==========");
     }
   }, [currentUserId, incomingConversationId, incomingProduct]);
 
@@ -495,17 +487,12 @@ function MessagePage() {
    */
 
   useEffect(() => {
-    console.log("========== LOAD CONVERSATIONS EFFECT ==========");
-
-    console.log("currentUserId:", currentUserId);
 
     if (!currentUserId) {
-      console.log("STOP: currentUserId is not ready");
 
       return;
     }
-
-    console.log("CALLING loadConversations()");
+");
 
     loadConversations();
   }, [currentUserId, loadConversations]);
@@ -525,13 +512,7 @@ function MessagePage() {
     try {
       setLoadingMessages(true);
 
-      console.log("========== LOAD MESSAGES ==========");
-
-      console.log("conversationId:", conversationId);
-
       const response = await getMessages(conversationId);
-
-      console.log("getMessages response:", response);
 
       /*
        * Normalize messages response
@@ -548,8 +529,6 @@ function MessagePage() {
       } else if (Array.isArray(response?.messages)) {
         data = response.messages;
       }
-
-      console.log("NORMALIZED MESSAGES:", data);
 
       setMessages(data);
     } catch (error) {
@@ -581,10 +560,6 @@ function MessagePage() {
 
     const conversationId = selectedConversation._id.toString();
 
-    console.log("========== SELECTED CONVERSATION READY ==========");
-
-    console.log("conversationId:", conversationId);
-
     /*
      * ---------------------------------------------
      * Load message history
@@ -611,12 +586,9 @@ function MessagePage() {
 
     const joinRoom = () => {
       if (!socket?.connected) {
-        console.log("Socket is not connected yet.");
 
         return;
       }
-
-      console.log("Joining conversation room:", conversationId);
 
       socket.emit(
         "conversation:join",
@@ -624,10 +596,8 @@ function MessagePage() {
           conversationId,
         },
         (response) => {
-          console.log("conversation:join response:", response);
 
           if (response?.success) {
-            console.log("Joined conversation:", conversationId);
           } else {
             console.error("Join conversation failed:", response?.message);
           }
@@ -658,7 +628,6 @@ function MessagePage() {
       socket?.off("connect", joinRoom);
 
       if (socket?.connected) {
-        console.log("Leaving conversation:", conversationId);
 
         socket.emit("conversation:leave", {
           conversationId,
@@ -679,9 +648,6 @@ function MessagePage() {
     }
 
     const handleNewMessage = (message) => {
-      console.log("========== MESSAGE NEW ==========");
-
-      console.log("Realtime message:", message);
 
       if (!message?._id) {
         return;
@@ -855,8 +821,6 @@ function MessagePage() {
       return;
     }
 
-    console.log("Selecting conversation:", conversation);
-
     // Get current unread count before marking as read
     const currentUnreadCount = conversation.unreadCount || 0;
 
@@ -911,7 +875,6 @@ function MessagePage() {
     let trimmedContent = "";
     let type = "text";
     let image = null;
-    let images = null;
 
     if (typeof payload === "string") {
       trimmedContent = payload.trim();
@@ -919,34 +882,24 @@ function MessagePage() {
       trimmedContent = (payload.content || "").trim();
       type = payload.type || "text";
       image = payload.image || null;
-      images = payload.images || null; // Add images array
     }
 
     if (type === "text" && !trimmedContent) {
       return;
     }
 
-    if (type === "image" && !image && !images && !trimmedContent) {
+    if (type === "image" && !image && !trimmedContent) {
       return;
     }
 
     try {
-      console.log("========== SEND MESSAGE ==========");
-      console.log("conversationId:", selectedConversation._id);
-      console.log("type:", type);
-      console.log("content:", trimmedContent);
-      console.log("image:", image);
-      console.log("images:", images); // Log images array
 
       const response = await sendMessage({
         conversationId: selectedConversation._id,
-        content: trimmedContent || (type === "image" ? (images ? `[${images.length} Hình ảnh]` : "[Hình ảnh]") : ""),
+        content: trimmedContent || (type === "image" ? "[Hình ảnh]" : ""),
         type,
         image,
-        images, // Pass images array to API
       });
-
-      console.log("sendMessage response:", response);
 
       /*
        * ---------------------------------------------
@@ -1233,3 +1186,4 @@ function MessagePage() {
 }
 
 export default MessagePage;
+

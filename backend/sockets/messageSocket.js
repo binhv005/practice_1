@@ -203,6 +203,19 @@ const registerMessageSocket = (io, socket) => {
     try {
       const conversationId = payload?.conversationId;
       const content = payload?.content;
+      const type = payload?.type || "text";
+      const image = payload?.image || null;
+      const images = payload?.images || [];
+
+      // Debug logging
+      console.log("📨 Socket message:send received:", {
+        conversationId,
+        type,
+        content,
+        image,
+        images,
+        imagesLength: images.length,
+      });
 
       /**
        * Validate conversationId.
@@ -238,7 +251,8 @@ const registerMessageSocket = (io, socket) => {
 
       const trimmedContent = content.trim();
 
-      if (!trimmedContent) {
+      // Allow empty content if there are images
+      if (!trimmedContent && images.length === 0 && !image) {
         const result = {
           success: false,
           message: "Tin nhắn không được để trống",
@@ -255,6 +269,22 @@ const registerMessageSocket = (io, socket) => {
         const result = {
           success: false,
           message: "Tin nhắn không được vượt quá 5000 ký tự",
+        };
+
+        if (typeof callback === "function") {
+          callback(result);
+        }
+
+        return;
+      }
+
+      /**
+       * Validate images array.
+       */
+      if (images.length > 5) {
+        const result = {
+          success: false,
+          message: "Tối đa 5 ảnh mỗi tin nhắn",
         };
 
         if (typeof callback === "function") {
@@ -370,11 +400,32 @@ const registerMessageSocket = (io, socket) => {
        *
        * Không emit trước khi save.
        */
-      const message = await Message.create({
+      const messageData = {
         conversation: conversationId,
         sender: currentUserId,
-        content: trimmedContent,
+        content: trimmedContent || `[${images.length} Hình ảnh]`,
+        type,
         readBy: [currentUserId],
+      };
+
+      // Add image fields if present
+      if (image) {
+        messageData.image = image;
+      }
+
+      if (images.length > 0) {
+        messageData.images = images;
+      }
+
+      const message = await Message.create(messageData);
+
+      // Debug: Check what was saved
+      console.log("💾 Message created in DB:", {
+        _id: message._id,
+        type: message.type,
+        image: message.image,
+        images: message.images,
+        content: message.content,
       });
 
       /**

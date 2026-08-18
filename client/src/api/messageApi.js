@@ -41,6 +41,7 @@ export const sendMessage = ({
   content,
   type = "text",
   image = null,
+  images = null,
 }) => {
   return axios.post(
     `${CONVERSATION_API_URL}/${conversationId}/messages`,
@@ -48,6 +49,7 @@ export const sendMessage = ({
       content,
       type,
       image,
+      images, // Array of image URLs
     },
     {
       withCredentials: true,

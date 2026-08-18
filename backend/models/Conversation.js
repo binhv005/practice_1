@@ -43,12 +43,8 @@ const conversationSchema = new mongoose.Schema(
   },
 );
 
-conversationSchema.index({
-  participants: 1,
-});
-
-conversationSchema.index({
-  product: 1,
-});
+// Compound indexes for faster queries
+conversationSchema.index({ participants: 1, lastMessageAt: -1 }); // For getting user's conversations sorted by last message
+conversationSchema.index({ product: 1, participants: 1 }); // For finding conversation by product and participants
 
 module.exports = mongoose.model("Conversation", conversationSchema);

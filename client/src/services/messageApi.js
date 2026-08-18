@@ -49,11 +49,13 @@ export const sendMessage = async ({
   content,
   type = "text",
   image = null,
+  images = null,  // Add images array parameter
 }) => {
   const response = await api.post(`/conversations/${conversationId}/messages`, {
     content,
     type,
     image,
+    images,  // Include images array in payload
   });
 
   return response.data;
