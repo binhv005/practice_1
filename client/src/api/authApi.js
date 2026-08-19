@@ -63,3 +63,17 @@ export const googleLoginApi = (data) => {
     withCredentials: true,
   });
 };
+
+export const sendSmsOtpApi = (phoneNumber) => {
+  return axios.post(
+    `${API_URL}/send-sms-otp`,
+    { phoneNumber },
+    { withCredentials: true },
+  );
+};
+
+export const verifySmsOtpApi = (data) => {
+  return axios.post(`${API_URL}/verify-sms-otp`, data, {
+    withCredentials: true,
+  });
+};

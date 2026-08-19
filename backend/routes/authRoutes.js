@@ -8,6 +8,10 @@ const {
   forgotPassword,
   resetPassword,
   googleLogin,
+  verifyOTP,
+  resendOTP,
+  sendSMSOTP,
+  verifySMSOTP,
 } = require("../controllers/authController");
 
 const authMiddleware = require("../middleware/authMiddleware");
@@ -16,6 +20,14 @@ const roleMiddleware = require("../middleware/roleMiddleware");
 const router = express.Router();
 
 router.post("/register", register);
+
+// Email OTP Verification
+router.post("/verify-otp", verifyOTP);
+router.post("/resend-otp", resendOTP);
+
+// SMS OTP (Firebase Phone Auth)
+router.post("/send-sms-otp", sendSMSOTP);
+router.post("/verify-sms-otp", verifySMSOTP);
 
 router.post("/login", login);
 

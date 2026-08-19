@@ -12,8 +12,9 @@ const userSchema = new mongoose.Schema(
 
     email: {
       type: String,
-      required: [true, "Email là bắt buộc"],
+      required: false,
       unique: true,
+      sparse: true,
       trim: true,
       lowercase: true,
       index: true,
@@ -119,6 +120,34 @@ const userSchema = new mongoose.Schema(
     resetPasswordExpires: {
       type: Date,
       default: undefined,
+    },
+
+    // OTP verification fields for registration
+    otpCode: {
+      type: String,
+      default: undefined,
+    },
+
+    otpExpires: {
+      type: Date,
+      default: undefined,
+    },
+
+    isEmailVerified: {
+      type: Boolean,
+      default: false,
+    },
+
+    phoneVerified: {
+      type: Boolean,
+      default: false,
+    },
+
+    firebaseUid: {
+      type: String,
+      default: undefined,
+      sparse: true,
+      index: true,
     },
   },
   {

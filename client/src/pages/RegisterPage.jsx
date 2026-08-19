@@ -3,7 +3,8 @@ import { Gift } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 import RegisterForm from "../components/auth/RegisterForm";
-import { registerApi } from "../api/authApi";
+import SocialLoginButtons from "../components/auth/SocialLoginButtons";
+import { registerApi, googleLoginApi } from "../api/authApi";
 import { useToast } from "../contexts/ToastContext";
 
 function RegisterPage() {
@@ -103,24 +104,16 @@ function RegisterPage() {
       });
 
       if (response.data.success) {
-        // Đăng ký thành công - hiển thị modal success
-        setForm({
-          fullName: "",
-          phone: "",
-          email: "",
-          password: "",
-          confirmPassword: "",
-          agreeTerms: false,
-        });
-
-        // Thông báo thành công bằng Toast
-        const successMessage = `Chào mừng ${response.data.user.fullname}! Tài khoản của bạn đã được tạo thành công.`;
-        toast.success(successMessage);
+        // Đăng ký thành công - Redirect đến trang verify OTP
+        const { userId, email } = response.data;
         
-        // Redirect về login sau 1.5 giây
+        // Thông báo thành công
+        toast.success("Mã OTP đã được gửi đến email của bạn");
+        
+        // Redirect đến trang verify OTP với userId và email
         setTimeout(() => {
-          navigate("/login");
-        }, 1500);
+          navigate(`/verify-otp?userId=${userId}&email=${encodeURIComponent(email)}`);
+        }, 1000);
       }
     } catch (error) {
       console.error("Register error:", error);
@@ -131,6 +124,68 @@ function RegisterPage() {
     } finally {
       setLoading(false);
     }
+  };
+
+  // Handle Google Sign Up Success
+  const handleGoogleSuccess = async (credentialResponse) => {
+    try {
+      setLoading(true);
+      setErrors({});
+
+      console.log("🔵 Google credential received for sign up:", credentialResponse);
+
+      // Gọi API backend để verify và đăng ký/đăng nhập với Google
+      // Backend sẽ tự động tạo account nếu chưa tồn tại
+      console.log("📡 Calling backend API /google-login...");
+      const response = await googleLoginApi({
+        credential: credentialResponse.credential,
+      });
+
+      console.log("✅ Google sign up response:", response.data);
+
+      if (response.data.success) {
+        const user = response.data.user;
+
+        console.log("👤 User info:", user);
+        console.log("📸 Avatar URL:", user.avatar);
+
+        // Lưu user info vào localStorage (consistent với LoginPage)
+        localStorage.setItem("user", JSON.stringify(user));
+
+        // Verify đã lưu
+        const saved = JSON.parse(localStorage.getItem("user"));
+        console.log("💾 Saved to localStorage:", saved);
+
+        // Hiển thị toast thành công
+        toast.success(`Chào mừng ${user.fullname}! Đăng ký Google thành công.`);
+
+        // Redirect based on role sau 1 giây
+        setTimeout(() => {
+          if (user.role === "admin" || user.role === "moderator") {
+            navigate("/admin/dashboard");
+          } else {
+            navigate("/");
+          }
+        }, 1000);
+      }
+    } catch (error) {
+      console.error("❌ Google sign up error:", error);
+      console.error("Error response:", error.response?.data);
+
+      setErrors({
+        general: error.response?.data?.message || "Đăng ký bằng Google thất bại",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Handle Google Sign Up Error
+  const handleGoogleError = () => {
+    console.error("Google sign up failed");
+    setErrors({
+      general: "Đăng ký bằng Google thất bại. Vui lòng thử lại.",
+    });
   };
 
   return (
@@ -269,6 +324,19 @@ function RegisterPage() {
             onSubmit={handleSubmit}
           />
 
+          {/* Divider */}
+          <div className="my-6 flex items-center gap-3">
+            <div className="h-px flex-1 bg-gray-200" />
+            <span className="text-sm text-gray-400">Hoặc</span>
+            <div className="h-px flex-1 bg-gray-200" />
+          </div>
+
+          {/* Social Sign Up Buttons */}
+          <SocialLoginButtons
+            onGoogleSuccess={handleGoogleSuccess}
+            onGoogleError={handleGoogleError}
+          />
+
           {/* Login */}
           <div
             className="
@@ -297,6 +365,47 @@ function RegisterPage() {
               "
             >
               Đăng nhập ngay
+            </button>
+          </div>
+
+          {/* SMS Registration Option */}
+          <div className="mt-4 text-center">
+            <p className="mb-2 text-xs text-gray-500">Hoặc đăng ký bằng</p>
+            <button
+              type="button"
+              onClick={() => navigate("/register-sms")}
+              className="
+                inline-flex
+                items-center
+                gap-2
+                rounded-lg
+                border
+                border-[#ffba00]
+                bg-white
+                px-4
+                py-2
+                text-sm
+                font-semibold
+                text-[#b17b00]
+                transition
+                hover:bg-[#ffba00]
+                hover:text-[#6c4d00]
+              "
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path>
+              </svg>
+              Đăng ký bằng SMS
             </button>
           </div>
         </div>

@@ -1,294 +1,359 @@
-# 🔐 Hướng dẫn Setup Google OAuth Login
+# 🔑 Google OAuth Setup - Quick Guide
 
-## ✅ Đã implement:
+## 📋 Checklist
 
-1. ✅ Loại bỏ Facebook và Apple login button
-2. ✅ Chỉ giữ lại Google login
-3. ✅ Cài đặt `@react-oauth/google` cho frontend
-4. ✅ Cài đặt `google-auth-library` cho backend
-5. ✅ Tạo API endpoint `/api/auth/google-login`
-6. ✅ Auto tạo account nếu chưa tồn tại
-7. ✅ Auto login nếu đã có account
+- [ ] Tạo Google Cloud Project
+- [ ] Enable Google+ API
+- [ ] Tạo OAuth Client ID
+- [ ] Configure Authorized Origins & Redirect URIs
+- [ ] Copy Client ID
+- [ ] Add to Backend `.env`
+- [ ] Add to Frontend `.env`
+- [ ] Test locally
+- [ ] Deploy và update production domains
 
----
+## 🚀 Quick Setup (5 phút)
 
-## 🚀 Cách lấy Google Client ID:
+### Bước 1: Google Cloud Console
 
-### Bước 1: Tạo Project trên Google Cloud Console
+1. Truy cập: https://console.cloud.google.com/
+2. **Create Project** hoặc chọn existing project
+3. Navigate: **APIs & Services** → **Library**
+4. Search: **Google+ API** → Click **Enable**
 
-1. Vào https://console.cloud.google.com/
-2. Click "Select a project" → "New Project"
-3. Nhập tên project: `Mini Marketplace`
-4. Click "Create"
+### Bước 2: Create OAuth Credentials
 
-### Bước 2: Enable Google+ API
+1. Navigate: **APIs & Services** → **Credentials**
+2. Click: **+ CREATE CREDENTIALS** → **OAuth client ID**
+3. Click: **CONFIGURE CONSENT SCREEN** (nếu chưa có)
+   - User Type: **External**
+   - App name: `Your App Name`
+   - User support email: Your email
+   - Developer contact: Your email
+   - Click **SAVE AND CONTINUE** → Skip scopes → **SAVE AND CONTINUE**
+4. Back to **Create OAuth client ID**:
+   - Application type: **Web application**
+   - Name: `Web Client` (hoặc tên bất kỳ)
 
-1. Vào https://console.cloud.google.com/apis/library
-2. Tìm "Google+ API"
-3. Click "Enable"
+### Bước 3: Configure Origins
 
-### Bước 3: Tạo OAuth 2.0 Client ID
-
-1. Vào https://console.cloud.google.com/apis/credentials
-2. Click "Create Credentials" → "OAuth client ID"
-3. Nếu chưa config OAuth consent screen:
-   - Click "Configure Consent Screen"
-   - Chọn "External"
-   - Điền thông tin:
-     - App name: `Mini Marketplace`
-     - User support email: email của bạn
-     - Developer contact: email của bạn
-   - Click "Save and Continue"
-   - Skip "Scopes" (click Save and Continue)
-   - Add test users: email của bạn
-   - Click "Save and Continue"
-
-4. Quay lại "Credentials" → "Create Credentials" → "OAuth client ID"
-5. Chọn "Application type": **Web application**
-6. Nhập thông tin:
-   - Name: `Mini Marketplace Web Client`
-   - **Authorized JavaScript origins:**
-     ```
-     http://localhost:5173
-     http://localhost:3000
-     ```
-   - **Authorized redirect URIs:**
-     ```
-     http://localhost:5173
-     http://localhost:3000
-     ```
-7. Click "Create"
-8. Copy **Client ID** (dạng: `xxxxx.apps.googleusercontent.com`)
-
-### Bước 4: Cập nhật .env files
-
-**Backend (.env):**
-```env
-GOOGLE_CLIENT_ID=YOUR_CLIENT_ID_HERE.apps.googleusercontent.com
+**Authorized JavaScript origins:**
+```
+http://localhost:5173
+https://your-production-domain.com
+https://your-production-domain.vercel.app
 ```
 
-**Frontend (client/.env):**
-```env
-VITE_GOOGLE_CLIENT_ID=YOUR_CLIENT_ID_HERE.apps.googleusercontent.com
+**Authorized redirect URIs:**
+```
+http://localhost:5173
+https://your-production-domain.com
+https://your-production-domain.vercel.app
 ```
 
-⚠️ **LƯU Ý:** Client ID phải GIỐNG NHAU ở cả 2 file!
+⚠️ **Lưu ý:** Không có trailing slash `/`
 
-### Bước 5: Restart cả frontend và backend
+### Bước 4: Copy Client ID
+
+Click **CREATE** → Copy **Client ID**
+
+Format: `123456789-abc123def456.apps.googleusercontent.com`
+
+### Bước 5: Configure Backend
+
+File: `backend/.env`
+
+```env
+# Existing vars...
+
+# Google OAuth
+GOOGLE_CLIENT_ID=123456789-abc123def456.apps.googleusercontent.com
+```
+
+### Bước 6: Configure Frontend
+
+File: `client/.env`
+
+```env
+VITE_API_URL=http://localhost:3000/api
+VITE_GOOGLE_CLIENT_ID=123456789-abc123def456.apps.googleusercontent.com
+```
+
+File: `client/.env.production`
+
+```env
+VITE_API_URL=https://your-backend-api.com/api
+VITE_GOOGLE_CLIENT_ID=123456789-abc123def456.apps.googleusercontent.com
+```
+
+### Bước 7: Restart Servers
 
 ```bash
-# Terminal 1 - Backend
+# Backend
 cd backend
 npm run dev
 
-# Terminal 2 - Frontend
+# Frontend (new terminal)
 cd client
 npm run dev
 ```
 
----
+### Bước 8: Test
 
-## 🧪 Test Google Login:
+1. Open: http://localhost:5173/register
+2. Click: **"Đăng ký với Google"**
+3. Select Google account
+4. ✅ Should redirect to home page
 
-### Test 1: Login với Google account
+## 🔍 Verify Setup
 
-1. Vào http://localhost:5173/login
-2. Click nút "Sign in with Google"
-3. Chọn Google account
-4. ✅ Tự động đăng nhập và redirect về trang chủ
+### Check Environment Variables
 
-### Test 2: Auto tạo account mới
-
-1. Đăng nhập với email chưa có trong database
-2. Backend tự động tạo user mới với thông tin từ Google
-3. ✅ User được tạo với:
-   - Email từ Google
-   - Tên từ Google
-   - Avatar từ Google
-   - Password random (user không biết, chỉ dùng Google login)
-
-### Test 3: Login với account đã tồn tại
-
-1. Đăng nhập với email đã có trong database
-2. Backend verify và login
-3. ✅ Update avatar nếu chưa có
-
----
-
-## 📊 Luồng hoạt động:
-
-### Frontend Flow:
-```
-1. User click "Sign in with Google"
-   ↓
-2. Google OAuth popup hiện ra
-   ↓
-3. User chọn account và authorize
-   ↓
-4. Google trả về credential (JWT token)
-   ↓
-5. Frontend gọi API: POST /api/auth/google-login
-   Body: { credential: "..." }
-   ↓
-6. Backend verify token → Login/Register
-   ↓
-7. Backend trả về user info + set cookie
-   ↓
-8. Frontend lưu localStorage → Redirect
+**Backend:**
+```bash
+cd backend
+node -e "require('dotenv').config(); console.log('GOOGLE_CLIENT_ID:', process.env.GOOGLE_CLIENT_ID ? '✅ Set' : '❌ Missing')"
 ```
 
-### Backend Flow:
-```
-1. Nhận credential từ frontend
-   ↓
-2. Verify với Google API
-   ↓
-3. Extract user info: email, name, picture
-   ↓
-4. Check email đã tồn tại chưa?
-   
-   Nếu ĐÃ TỒN TẠI:
-   - Check status (banned/pending)
-   - Update avatar nếu chưa có
-   - Login
-   
-   Nếu CHƯA TỒN TẠI:
-   - Tạo user mới
-   - Set random password
-   - Set avatar từ Google
-   - Set role = "user"
-   - Set status = "active"
-   ↓
-5. Tạo JWT token
-   ↓
-6. Set cookie (30 ngày)
-   ↓
-7. Trả về user info
+**Frontend:**
+```bash
+cd client
+echo $VITE_GOOGLE_CLIENT_ID
+# Should print your Client ID
 ```
 
----
+### Check Console Logs
 
-## 🔒 Bảo mật:
+**Browser Console:**
+- Should see: `🔵 Google credential received`
+- Should see: `📡 Calling backend API /google-login...`
+- Should see: `✅ Google sign up response: {...}`
 
-1. ✅ Token được verify với Google API → Không thể fake
-2. ✅ Email phải verified by Google
-3. ✅ Password random → User không biết, chỉ login bằng Google
-4. ✅ JWT cookie HttpOnly → Chống XSS
-5. ✅ Check account status (banned/pending)
+**Backend Logs:**
+- Should see: `🔵 Google login request received`
+- Should see: `✅ Credential received: ...`
+- Should see: `✅ Token verified. User info: ...`
 
----
+## 🐛 Common Issues
 
-## 🐛 Troubleshooting:
+### Issue 1: Button không hiện
 
-### Lỗi: "Invalid Client ID"
-➡️ Check `GOOGLE_CLIENT_ID` trong `.env` đúng chưa
+**Triệu chứng:** Không thấy button "Đăng ký với Google"
 
-### Lỗi: "redirect_uri_mismatch"
-➡️ Thêm `http://localhost:5173` vào "Authorized JavaScript origins" trong Google Console
+**Nguyên nhân:**
+- `VITE_GOOGLE_CLIENT_ID` chưa set hoặc sai
+- Package `@react-oauth/google` chưa install
 
-### Lỗi: "idpiframe_initialization_failed"
-➡️ Check browser không block 3rd party cookies
-
-### Lỗi: "popup_closed_by_user"
-➡️ User đóng popup trước khi authorize → Bình thường
-
-### Button Google không hiện
-➡️ Check:
-1. `VITE_GOOGLE_CLIENT_ID` có trong `client/.env`
-2. Restart frontend sau khi thêm env
-3. Check console có lỗi không
-
----
-
-## 📁 Files đã tạo/sửa:
-
-### Frontend:
-1. ✅ `client/src/main.jsx` - Wrap với GoogleOAuthProvider
-2. ✅ `client/src/components/auth/SocialLoginButtons.jsx` - Chỉ giữ Google
-3. ✅ `client/src/pages/LoginPage.jsx` - Handle Google login
-4. ✅ `client/src/api/authApi.js` - Thêm googleLoginApi
-5. ✅ `client/.env` - Thêm VITE_GOOGLE_CLIENT_ID
-6. ✅ `client/package.json` - Thêm @react-oauth/google
-
-### Backend:
-7. ✅ `backend/controllers/authController.js` - Thêm googleLogin function
-8. ✅ `backend/routes/authRoutes.js` - Thêm POST /google-login
-9. ✅ `backend/.env` - Thêm GOOGLE_CLIENT_ID
-10. ✅ `backend/package.json` - Thêm google-auth-library
-
----
-
-## 📝 .env Template:
-
-### backend/.env
-```env
-MONGODB_URI=mongodb://localhost:27017/donation_app
-ADMIN_ID=6a799a83d9e719d0439bc99d
-
-CLOUDINARY_CLOUD_NAME=ai1z2oaj
-CLOUDINARY_API_KEY=172892198212144
-CLOUDINARY_API_SECRET=SM1DvYl34kk34BNEwAtz-F6k0l4
-
-JWT_SECRET=AK_JAS_N@&AS
-JWT_EXPIRES_IN=7d
-
-EMAIL_HOST=smtp.gmail.com
-EMAIL_PORT=587
-EMAIL_USER=your_email@gmail.com
-EMAIL_PASS=your_app_password_here
-
-FRONTEND_URL=http://localhost:5173
-
-# Google OAuth - LẤY TỪ GOOGLE CLOUD CONSOLE
-GOOGLE_CLIENT_ID=xxxxx.apps.googleusercontent.com
+**Fix:**
+```bash
+cd client
+npm install @react-oauth/google
+echo $VITE_GOOGLE_CLIENT_ID  # Verify
+npm run dev  # Restart
 ```
 
-### client/.env
-```env
-# Google OAuth Client ID - PHẢI GIỐNG BACKEND
-VITE_GOOGLE_CLIENT_ID=xxxxx.apps.googleusercontent.com
+### Issue 2: "idpiframe_initialization_failed"
+
+**Triệu chứng:** Error trong console khi load page
+
+**Nguyên nhân:** Browser block third-party cookies
+
+**Fix:**
+1. Chrome: Settings → Privacy → Cookies → Allow all cookies
+2. Or use Incognito mode
+3. Or add exception for `accounts.google.com`
+
+### Issue 3: "Credential không hợp lệ"
+
+**Triệu chứng:** Error sau khi chọn Google account
+
+**Nguyên nhân:**
+- Client ID sai
+- Origins không match
+
+**Fix:**
+1. Verify Client ID trong `.env` files
+2. Check Google Cloud Console → Credentials:
+   - Authorized JavaScript origins must include `http://localhost:5173`
+   - Case-sensitive, no trailing slash
+3. Clear browser cache
+4. Restart dev server
+
+### Issue 4: Backend error "Invalid token"
+
+**Triệu chứng:** 500 error sau khi gửi credential
+
+**Nguyên nhân:**
+- Backend `GOOGLE_CLIENT_ID` sai hoặc chưa set
+- Token expired
+- Google API issue
+
+**Fix:**
+```bash
+cd backend
+cat .env | grep GOOGLE_CLIENT_ID  # Verify
+npm run dev  # Restart
 ```
 
+### Issue 5: "Origin mismatch"
+
+**Triệu chứng:** Error: "redirect_uri_mismatch" hoặc origin not allowed
+
+**Nguyên nhân:** Domain không có trong authorized origins
+
+**Fix:**
+1. Go to Google Cloud Console
+2. Edit OAuth Client
+3. Add origin: `http://localhost:5173` (exact match)
+4. Save
+5. Wait 5 minutes for propagation
+6. Try again
+
+## 📊 Testing Checklist
+
+### Local Testing
+
+- [ ] Start backend: `npm run dev`
+- [ ] Start frontend: `npm run dev`
+- [ ] Open: http://localhost:5173/register
+- [ ] Click "Đăng ký với Google"
+- [ ] Google popup appears
+- [ ] Select account
+- [ ] Redirect to home page
+- [ ] User logged in (check header)
+- [ ] Check backend logs - no errors
+- [ ] Check browser console - no errors
+
+### Production Testing
+
+- [ ] Deploy backend with `GOOGLE_CLIENT_ID` env var
+- [ ] Deploy frontend with `VITE_GOOGLE_CLIENT_ID` env var
+- [ ] Add production domain to Google Cloud Console origins
+- [ ] Wait 5-10 minutes for DNS propagation
+- [ ] Test on production URL
+- [ ] Verify in incognito mode
+- [ ] Test on mobile device
+
+## 🔐 Security Checklist
+
+### Google Cloud Console
+
+- [ ] OAuth Consent Screen configured
+- [ ] App name meaningful
+- [ ] Support email set
+- [ ] Only necessary scopes requested
+- [ ] Authorized origins restricted (not `*`)
+- [ ] Client ID kept confidential (not in public repos)
+
+### Backend
+
+- [ ] `GOOGLE_CLIENT_ID` in `.env` (not hardcoded)
+- [ ] `.env` in `.gitignore`
+- [ ] Token verification implemented
+- [ ] Email verified check implemented
+- [ ] Account status check implemented
+
+### Frontend
+
+- [ ] `VITE_GOOGLE_CLIENT_ID` in `.env.local` (not committed)
+- [ ] `.env.local` in `.gitignore`
+- [ ] Production env vars set in hosting platform
+- [ ] No sensitive data in frontend code
+
+## 📦 Required Packages
+
+### Backend
+
+```json
+{
+  "dependencies": {
+    "google-auth-library": "^9.0.0"
+  }
+}
+```
+
+Already installed! ✅
+
+### Frontend
+
+```json
+{
+  "dependencies": {
+    "@react-oauth/google": "^0.11.0"
+  }
+}
+```
+
+Install if missing:
+```bash
+cd client
+npm install @react-oauth/google
+```
+
+## 🌐 Production Deployment
+
+### Vercel (Frontend)
+
+1. Go to project settings
+2. Environment Variables
+3. Add: `VITE_GOOGLE_CLIENT_ID` = `your-client-id`
+4. Redeploy
+
+### Render/Railway/Heroku (Backend)
+
+1. Go to project settings
+2. Environment Variables
+3. Add: `GOOGLE_CLIENT_ID` = `your-client-id`
+4. Redeploy
+
+### Update Google Console
+
+1. Go to Google Cloud Console → Credentials
+2. Edit OAuth Client ID
+3. Add production origins:
+   ```
+   https://your-app.vercel.app
+   https://your-api.render.com
+   ```
+4. Save
+5. Wait 5-10 minutes
+
+### Test Production
+
+1. Open production URL
+2. Navigate to /register
+3. Click Google button
+4. Should work!
+
+## 📚 Reference
+
+- **Google OAuth Guide:** https://developers.google.com/identity/protocols/oauth2
+- **React OAuth Google:** https://www.npmjs.com/package/@react-oauth/google
+- **Google Cloud Console:** https://console.cloud.google.com/
+
+## ✅ Success Criteria
+
+When everything is working:
+
+1. ✅ Google button visible on /register and /login
+2. ✅ Click button → Google popup appears
+3. ✅ Select account → popup closes
+4. ✅ User logged in → redirect to home
+5. ✅ User info in header (name, avatar)
+6. ✅ No errors in browser console
+7. ✅ No errors in backend logs
+8. ✅ Works in incognito mode
+9. ✅ Works on mobile
+10. ✅ Works in production
+
 ---
 
-## ✅ Checklist:
+**Need Help?**
 
-- [x] Cài package `@react-oauth/google` (frontend)
-- [x] Cài package `google-auth-library` (backend)
-- [x] Loại bỏ Facebook/Apple button
-- [x] Implement Google login button
-- [x] Tạo API endpoint `/google-login`
-- [x] Auto register nếu chưa có account
-- [x] Auto login nếu đã có account
-- [ ] Lấy Google Client ID từ Console (cần làm thủ công)
-- [ ] Cập nhật .env files
-- [ ] Test login với Google account
+1. Check console logs (browser & backend)
+2. Verify environment variables
+3. Check Google Cloud Console settings
+4. Try incognito mode
+5. Clear cache and restart servers
 
----
-
-## 🎯 Kết quả:
-
-**Trước:**
-- Có 3 nút: Google, Facebook, Apple
-- Chỉ là UI, không có chức năng
-
-**Sau:**
-- Chỉ có 1 nút: Google
-- ✅ Chức năng hoạt động đầy đủ
-- ✅ Auto register/login
-- ✅ Lấy avatar từ Google
-- ✅ Security với token verification
-
----
-
-## 🚀 Next Steps:
-
-1. Lấy Google Client ID theo hướng dẫn trên
-2. Cập nhật vào 2 file `.env`
-3. Restart backend + frontend
-4. Test login với Google account của bạn
-5. ✅ Hoàn thành!
-
----
-
-Nếu gặp vấn đề, check lại từng bước trong file này! 📚
+**Still stuck?** Review `GOOGLE_SIGNUP_GUIDE.md` for detailed troubleshooting.

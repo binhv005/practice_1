@@ -7,6 +7,9 @@ import UserProductPage from "./pages/UserProductPage";
 import HomePage from "./pages/HomePage";
 import LoginPage from "./pages/LoginPage";
 import RegisterPage from "./pages/RegisterPage";
+import RegisterSMSPage from "./pages/RegisterSMSPage";
+import VerifyOTPPage from "./pages/VerifyOTPPage";
+import VerifySMSOTPPage from "./pages/VerifySMSOTPPage";
 import ForgotPasswordPage from "./pages/ForgotPasswordPage";
 import ResetPasswordPage from "./pages/ResetPasswordPage";
 import MessagePage from "./pages/MessagePage";
@@ -65,6 +68,9 @@ function App() {
       <Route path="/saved-products" element={<SavedProductsPage />} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
+      <Route path="/register-sms" element={<RegisterSMSPage />} />
+      <Route path="/verify-otp" element={<VerifyOTPPage />} />
+      <Route path="/verify-sms-otp" element={<VerifySMSOTPPage />} />
       <Route path="/forgot-password" element={<ForgotPasswordPage />} />
       <Route path="/reset-password" element={<ResetPasswordPage />} />
 

@@ -25,13 +25,16 @@
     "dnscache": "^1.0.2",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
+    "firebase-admin": "^13.10.0",
     "google-auth-library": "^11.0.2",
     "jsonwebtoken": "^9.0.3",
     "mongoose": "^9.9.1",
     "multer": "^2.2.0",
     "nodemailer": "^9.0.5",
+    "redis": "^6.2.1",
     "sharp": "^0.35.3",
-    "socket.io": "^4.8.3"
+    "socket.io": "^4.8.3",
+    "twilio": "^6.1.0"
   },
   "devDependencies": {
     "nodemon": "^3.1.14"

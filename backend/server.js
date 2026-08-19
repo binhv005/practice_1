@@ -3,6 +3,8 @@ require("dotenv").config();
 const http = require("http");
 const express = require("express");
 const connectDB = require("./config/database");
+const { connectRedis, closeRedis } = require("./config/redis");
+const { initFirebaseAdmin } = require("./config/firebaseAdmin");
 const cors = require("cors");
 const path = require("path");
 const cookieParser = require("cookie-parser");
@@ -19,7 +21,11 @@ const initializeSocket = require("./sockets");
 
 const app = express();
 
+// Connect to databases
 connectDB();
+connectRedis();
+
+initFirebaseAdmin();
 
 const allowedOrigins = [
   "http://localhost:5173",
@@ -114,8 +120,20 @@ app.set("io", io);
 
 server.listen(3000, () => {
   console.log("Server is running at http://localhost:3000");
-
   console.log("Socket.IO is running");
+});
+
+// Graceful shutdown
+process.on("SIGINT", async () => {
+  console.log("\n⚠️  Shutting down gracefully...");
+  await closeRedis();
+  process.exit(0);
+});
+
+process.on("SIGTERM", async () => {
+  console.log("\n⚠️  Shutting down gracefully...");
+  await closeRedis();
+  process.exit(0);
 });
 
 module.exports = app;
